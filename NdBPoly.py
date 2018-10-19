@@ -66,7 +66,7 @@ class NdBPoly():
             indices[(k,)+where_out[1:]] = where_out[0] - 1
         return indices
 
-    def transform_coord_to_pixel(self, coords, in_place=False):
+    def coord_edges(self, coords, in_place=False):
         coords = self.broadcast_coords(coords)
         if not in_place:
             coords = coords.copy()
@@ -91,8 +91,6 @@ class NdBPoly():
             aliasing[k, indices[k,...]==-1] += 1
             aliasing[k, indices[k,...]==self.knots_vectors[k].size-1] += -1
         
-        pixel_coords = indices + (coords - x0)/dx
-        
         if np.any(aliasing != 0):
             alias_sel = np.any(aliasing != 0, axis=0)
             recurse_coords = coords[:, alias_sel].copy()
@@ -101,20 +99,28 @@ class NdBPoly():
                 recurse_coords[negative_sel] = self.knots_vectors[k][0] - (recurse_coords[negative_sel] - self.knots_vectors[k][0])
                 positive_sel = (k, aliasing[k, alias_sel] > 0)
                 recurse_coords[positive_sel] = self.knots_vectors[k][-1] - (recurse_coords[positive_sel] - self.knots_vectors[k][-1])
-            recursed_coords, recursed_alias = self.transform_coord_to_pixel(
-                recurse_coords, True)
+            (recursed_indices, recursed_coords, recursed_x0,
+                recursed_dx, recursed_alias) = self.coord_edges(
+                                                    recurse_coords, True)
+                                                    
             aliasing[:, alias_sel] = aliasing[:, alias_sel] - recursed_alias
-            pixel_coords[:, alias_sel] = recursed_coords
-            
-        return pixel_coords, aliasing
-        return indices, coords, x0, dx
-        # can I recurse on indices, x0, dx, and aliasing instead of pixel_coords?
+            x0[:, alias_sel] = recursed_x0
+            dx[:, alias_sel] = recursed_dx
+            indices[:, alias_sel] = recursed_indices
+            coords[:, alias_sel] = recursed_coords
+
+        return indices, coords, x0, dx, aliasing
+        
+    def transform_coord_to_pixel(self, coords):
+        indices, coords, x0, dx, aliasing = self.coord_edges(coords)
+        pixel_coords = indices + (coords - x0)/dx
+        return pixel_coords, aliasing, dx
         
     
     def evaluate(self, coords, derivative=0):
-        output = np.ones((len(self.coords),) + self.coords.shape[1:])
-        pixel_coords, aliasing_mask = self.transform_coord_to_pixel
-        for k in range(self.ndim):
+        output = np.ones((len(self.coeffs),) + coords.shape[1:])
+        pixel_coords, aliasing_mask, dx = self.transform_coord_to_pixel(coords)
+        for k in range(len(self.coeffs)):
             output[k,...] = ndimage.map_coordinates(self.coeffs[k],
                 pixel_coords, prefilter=False, mode='nearest')
         return output
