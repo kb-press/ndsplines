@@ -67,13 +67,13 @@ class NdBPoly():
             lt_test = self.knots_vectors[k][vec_sel] >= coords[k, ...]
             ge_test =  coords[k, ...] >= self.knots_vectors[k][vec_sel]
             total_test = np.r_['0,{}'.format(coords.ndim-1), 
-                (self.knots_vectors[k][vec_sel] < 
+                (self.knots_vectors[k][vec_sel] > 
                     coords[k, ...])[0,...][None,...],
                     
                 lt_test[1:,...] & ge_test[:-1,...],
                 
-                (self.knots_vectors[k][vec_sel] > 
-                    coords[k, ...])[0,...][None,...],
+                (self.knots_vectors[k][vec_sel] <
+                    coords[k, ...])[-1,...][None,...],
             ]
             
             where_out = np.nonzero(total_test)

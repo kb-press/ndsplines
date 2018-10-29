@@ -1,4 +1,4 @@
-from scipy import ogrid, sin, mgrid, ndimage, array, interpolate
+from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
 import NdBPoly
@@ -16,7 +16,7 @@ fvals = np.sin(meshx)*np.sin(meshy)# np.sqrt(meshx**2 + meshy**2)
 testpoly = NdBPoly.NdBPoly(fvals, input_coords, odd_extrapolation=True)
 # testpoly.transform_coord_to_pixel(np.r_[-1.0, 0.05])
 
-factor = 2
+factor = 1
 newx = np.r_[-1:1:500j]*factor*np.pi/2
 newy = np.r_[-1:1:300j]*factor*np.pi/2
 
@@ -25,8 +25,8 @@ newy = np.r_[-1:1:300j]*factor*np.pi/2
 newmeshx, newmeshy = np.meshgrid(newx,newy, indexing='ij')
 newxymesh = np.r_['0,3', newmeshx, newmeshy]
 indices = testpoly.indices_from_coords(newxymesh)
-print(indices)
-new_coords, aliasing_mask, dxs = testpoly.transform_coord_to_pixel(newxymesh)
+# print(indices)
+# new_coords, aliasing_mask, dxs = testpoly.transform_coord_to_pixel(newxymesh)
 newf = testpoly.evaluate(newxymesh)
 
 plt.figure()
