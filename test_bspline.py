@@ -49,6 +49,9 @@ knot_gen = interpolate.make_interp_spline(x, np.zeros_like(x), bc_type=test_bc)
 res = interpolate.splprep(x=fvals.reshape(1,-1), u=x, s=0)
 tck = res[0]
 
+# plt.plot(xx[1::3], interpolate.splev(xx.reshape(25,-1), test_Bspline.tck).reshape(1,-1).squeeze()[1::3], 'x')
+# plt.plot(xx[::3], splinef.squeeze()[::3], 'x')
+
 
 print(test_Bspline.t - knot_gen.t) # knots are independent of coeff
 print(test_Bspline.c - tck[1])

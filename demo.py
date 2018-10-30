@@ -8,27 +8,51 @@ importlib.reload(NdBPoly)
 
 # x,y = ogrid[-np.pi:np.pi:50j,-np.pi:np.pi:5j]
 x = np.r_[-1:1:5j]*np.pi/2
-y = np.r_[-1:1:7j]*np.pi/2
+y = np.r_[-1:1:5j]*np.pi/2
 meshx, meshy = np.meshgrid(x,y, indexing='ij')
 input_coords = np.r_['0,3', meshx, meshy]
 fvals = np.sin(meshx)*np.sin(meshy)# np.sqrt(meshx**2 + meshy**2)
-test_NDBspline = NdBPoly.NDBPoly(input_coords, fvals)
 
-factor = 1.5
-newx = np.r_[-1:1:15j]*factor*np.pi/2
+
+factor = 1.25
+newx = np.r_[-1:1:1024j]*factor*np.pi/2
 newy = np.r_[-1:1:5j]*np.pi/2
 newmeshx, newmeshy = np.meshgrid(newx,newy, indexing='ij')
 newxymesh = np.r_['0,3', newmeshx, newmeshy]
 
 truef = np.sin(newmeshx)*np.sin(newmeshy)
-splinef = test_NDBspline(newxymesh)
-np.allclose(splinef, truef)
+
+# np.allclose(splinef, truef)
+skip_size = 16
+
+test_NDBspline = NdBPoly.NDBPoly(input_coords, fvals, bcs=(NdBPoly.clamped))
 
 plt.figure()
-plt.plot(newx, truef, 'x')
-plt.gca().set_color_cycle(None)
-plt.plot(newx, splinef[0,...])
 plt.plot(x, np.zeros_like(x), 'kx')
+# plt.plot(newx[::skip_size], truef[::skip_size,:], 'x')
+# plt.gca().set_prop_cycle(None)
+# 
+for yidx, yy in enumerate(y):
+    test_Bspline = interpolate.make_interp_spline(x, fvals[:,yidx], k=kval, bc_type="clamped")
+    bsplinef = test_Bspline(newx)
+    plt.plot(newx, bsplinef, 'k--', lw=2.0)
+
+plt.gca().set_prop_cycle(None)
+splinef = test_NDBspline(newxymesh)
+plt.plot(newx, splinef[0,...], alpha=0.75)
+
+plt.gca().set_prop_cycle(None)
+splinef = test_NDBspline(newxymesh, nus=[0,1])
+plt.plot(newx, splinef[0,...] + newy,'--', alpha=0.5)
+
+plt.gca().set_prop_cycle(None)
+splinef = test_NDBspline(newxymesh, nus=[1,0])
+plt.plot(newx, splinef[0,...],'--', alpha=0.75)
+
+# plt.gca().set_prop_cycle(None)
+# splinef = test_NDBspline(newxymesh, nus=[1,1])
+# plt.plot(newx, splinef[0,...],'--', alpha=0.75)
+    
 plt.show()
 
 ##
