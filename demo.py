@@ -32,10 +32,10 @@ plt.plot(x, np.zeros_like(x), 'kx')
 # plt.plot(newx[::skip_size], truef[::skip_size,:], 'x')
 # plt.gca().set_prop_cycle(None)
 # 
-for yidx, yy in enumerate(y):
-    test_Bspline = interpolate.make_interp_spline(x, fvals[:,yidx], k=kval, bc_type="clamped")
-    bsplinef = test_Bspline(newx)
-    plt.plot(newx, bsplinef, 'k--', lw=2.0)
+# for yidx, yy in enumerate(y):
+#     test_Bspline = interpolate.make_interp_spline(x, fvals[:,yidx], k=kval, bc_type="clamped")
+#     bsplinef = test_Bspline(newx)
+#     plt.plot(newx, bsplinef, 'k--', lw=2.0)
 
 plt.gca().set_prop_cycle(None)
 splinef = test_NDBspline(newxymesh)
@@ -43,11 +43,11 @@ plt.plot(newx, splinef[0,...], alpha=0.75)
 
 plt.gca().set_prop_cycle(None)
 splinef = test_NDBspline(newxymesh, nus=[0,1])
-plt.plot(newx, splinef[0,...] + newy,'--', alpha=0.5)
+plt.plot(newx, splinef[0,...] + newy*np.pi/4,'--', alpha=0.5)
 
 plt.gca().set_prop_cycle(None)
 splinef = test_NDBspline(newxymesh, nus=[1,0])
-plt.plot(newx, splinef[0,...],'--', alpha=0.75)
+plt.plot(newx, splinef[0,...],'-.', alpha=0.75)
 
 # plt.gca().set_prop_cycle(None)
 # splinef = test_NDBspline(newxymesh, nus=[1,1])
