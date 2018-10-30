@@ -2,7 +2,7 @@ from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.lib.arraypad import _validate_lengths
-import functools
+from functools import reduce
 
 
 clamped = (1, 0.0)
@@ -65,13 +65,13 @@ class NDBPoly(object):
                 y_line_sel = (Ellipsis,) + line_sel_base
                 
                 line_spline = interpolate.make_interp_spline(self.x[x_line_sel],
-                    self.y[y_line_sel].T,
+                    self.coeffs[y_line_sel].T,
                     bc_type=(bc_map[tuple(self.bcs[i-1,0,:])],
                              bc_map[tuple(self.bcs[i-1,1,:])])
                 )
-                self.knots[x_line_sel] = line_spline.t
                 self.coeffs[y_line_sel] = line_spline.c.T
                 self.splines[line_sel_base]
+            self.knots[i-1,...] = line_spline.t[(None,)*(i-1) + (slice(None),) + (None,)*(self.ndim-i)]
 
     def indices_from_coords(self, coords):
         indices = np.ones_like(coords, dtype=np.int_)*-1000
@@ -124,6 +124,8 @@ class NDBPoly(object):
         """
         nus = np.broadcast_to(nus, (self.ndim,))
 
+
+        x = self.broadcast_coords(x)
         # With periodic extrapolation we map x to the segment
         # [self.t[k], self.t[n]].
 
@@ -134,22 +136,26 @@ class NDBPoly(object):
         x[] = self.t[self.k] + (x - self.t[self.k]) % (self.t[n] -
                                                      self.t[self.k])
         """
-        x = self.broadcast_coords(x)
-        us = []
+        u_mats = []
         y = np.zeros((self.mdim,) + x.shape[1:])
-
+        input_op = list(range(self.ndim+1)) + [...,]
+        u_ops = []
+        output_op = [0,...]
         for i in np.arange(self.ndim)+1:
             data_all_other_ax_shape = np.asarray(np.r_[self.x.shape[1:i],
                 self.x.shape[i+1:]], dtype=np.int)
             nu = nus[i-1]
-            knot_sel = (i-1,) + (0,)*(i-1) + (slice(None,None),) + (0,)*(self.ndim-i-1)
+            knot_sel = (i-1,) + (0,)*(i-1) + (slice(None,None),) + (0,)*(self.ndim-i)
             ts = self.knots[knot_sel]
             xp = x[i-1,...]
             num_bases = self.coeffs.shape[i]
-            us.append(np.empty((num_bases,) + xp.shape))
+            u_mats.append(np.empty((num_bases,) + xp.shape))
+            u_ops.append([int(i), ...])
+            # cs = np.eye(num_bases)
+            # us.append(interpolate.splev(xp, (ts,cs,self.order)))
             for j in range(num_bases):
                 cs = np.r_[0:0:j*1j, 1.0, 0:0:(num_bases-j-1)*1j]
-                us[-1][j, ...] = interpolate.splev(xp, (ts,cs,self.order))
+                u_mats[-1][j, ...] = interpolate.splev(xp, (ts,cs,self.order))
 
             """
             for idx in np.ndindex(*data_all_other_ax_shape):
@@ -170,13 +176,6 @@ class NDBPoly(object):
                     #     self.order, xp, nu, True, out)
                     y[y_line_sel] = out.reshape(xp.shape[0], -1).T
             """
-        return us
-        
-
-x = np.r_[-1:1:5j]*np.pi/2
-y = np.r_[-1:1:7j]*np.pi/2
-meshx, meshy = np.meshgrid(x,y, indexing='ij')
-input_coords = np.r_['0,3', meshx, meshy]
-fvals = np.sin(meshx)*np.sin(meshy)# np.sqrt(meshx**2 + meshy**2)
-
-# spline = NDBPoly(fvals, input_coords)
+        u_args = [subarg for arg in zip(u_mats, u_ops) for subarg in arg]
+        y_out = np.einsum(self.coeffs, input_op, *u_args, output_op)
+        return y_out

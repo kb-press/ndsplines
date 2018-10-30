@@ -7,27 +7,31 @@ import importlib
 importlib.reload(NdBPoly)
 
 # x,y = ogrid[-np.pi:np.pi:50j,-np.pi:np.pi:5j]
-x = np.r_[-1:1:4j]*np.pi/2
-y = np.r_[-1:1:5j]*np.pi/2
+x = np.r_[-1:1:5j]*np.pi/2
+y = np.r_[-1:1:7j]*np.pi/2
 meshx, meshy = np.meshgrid(x,y, indexing='ij')
 input_coords = np.r_['0,3', meshx, meshy]
 fvals = np.sin(meshx)*np.sin(meshy)# np.sqrt(meshx**2 + meshy**2)
 test_NDBspline = NdBPoly.NDBPoly(input_coords, fvals)
 
-factor = 1
-newx = np.r_[-1:1:10j]*factor*np.pi/2
-newy = np.r_[1:1:1j]*factor*np.pi/2
+factor = 1.5
+newx = np.r_[-1:1:15j]*factor*np.pi/2
+newy = np.r_[-1:1:5j]*np.pi/2
 newmeshx, newmeshy = np.meshgrid(newx,newy, indexing='ij')
 newxymesh = np.r_['0,3', newmeshx, newmeshy]
 
+truef = np.sin(newmeshx)*np.sin(newmeshy)
 splinef = test_NDBspline(newxymesh)
+np.allclose(splinef, truef)
+
+plt.figure()
+plt.plot(newx, truef, 'x')
+plt.gca().set_color_cycle(None)
+plt.plot(newx, splinef[0,...])
+plt.plot(x, np.zeros_like(x), 'kx')
+plt.show()
 
 ##
-
-
-
-np.allclose(splinef, np.sin(newmeshx)*np.sin(newmeshy))
-
 plt.figure()
 # plt.imshow(splinef.prod(axis=2)[0,...])
 plt.plot(newx, splinef.prod(axis=1)[0,:,0])
