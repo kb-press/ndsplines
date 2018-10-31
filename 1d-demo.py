@@ -27,7 +27,7 @@ NDspline_dict = {"natural": NdBPoly.pinned, "clamped": NdBPoly.clamped, None: -1
 skip_size = 32
 plt.figure()
 for test_bc in test_bcs:
-    test_Bspline = interpolate.make_interp_spline(x, fvals, k=kval, bc_type=test_bc)
+    test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=test_bc)
     
     splinef = test_Bspline(xx)
     plt.plot(xx[::skip_size], splinef[::skip_size],'x')
@@ -36,7 +36,7 @@ for test_bc in test_bcs:
 plt.gca().set_prop_cycle(None)
 
 for test_bc in test_bcs:
-    test_NDBspline = NdBPoly.NDBPoly(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
+    test_NDBspline = NdBPoly.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
     NDsplienf = test_NDBspline(xx)
     plt.plot(xx, NDsplienf.squeeze())
     

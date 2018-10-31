@@ -4,7 +4,7 @@ import numpy as np
 
 # ndimage.spline_filter1d()
 
-xmax = 7
+xmax = 6
 factor=0.125
 x = np.unique(np.r_[0:xmax:(xmax+1)*1j])
 xx = np.r_[-factor*xmax:(1+factor)*xmax:1024j].reshape(1,-1)
@@ -20,8 +20,8 @@ for idx in range(c_max):
     spline_basis = interpolate.splev(xx, (t,c,k))
     plt.plot(xx[0,:], spline_basis[0,:], '-C'+str(idx))
     
-    out = ndimage.map_coordinates(c, xx, prefilter=False, order=2, mode='nearest')
-    plt.plot(xx.squeeze(), out.squeeze(), '--C'+str(idx))
+    # out = ndimage.map_coordinates(c, xx, prefilter=False, order=2, mode='nearest')
+    # plt.plot(xx.squeeze(), out.squeeze(), '--C'+str(idx))
 plt.plot(x, np.zeros_like(x), 'kx')
 plt.show()
 

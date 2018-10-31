@@ -25,7 +25,7 @@ truef = np.sin(newmeshx)*np.sin(newmeshy)
 # np.allclose(splinef, truef)
 skip_size = 16
 
-test_NDBspline = NdBPoly.NDBPoly(input_coords, fvals, bcs=(NdBPoly.clamped))
+test_NDBspline = NdBPoly.make_interp_spline(input_coords, fvals, bcs=(NdBPoly.clamped))
 
 plt.figure()
 plt.plot(x, np.zeros_like(x), 'kx')
