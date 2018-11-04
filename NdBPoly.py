@@ -73,7 +73,7 @@ class NDBPoly(object):
             indices[(k,)+where_out[1:]] = where_out[0] - 1
 
     def _eval_basis(self, dim, x, nu=0):
-        return interpolate.splev(x[dim-1,...], self.tcks[dim-1], nu)
+        return interpolate.splev(x, self.tcks[dim-1], nu)
 
     def _eval_bases(self, x, nus=0):
         """
@@ -110,7 +110,7 @@ class NDBPoly(object):
         u_mats = []        
         for i in np.arange(self.ndim)+1:
             nu = nus[i-1]
-            u_mats.append(self._eval_basis(i, x, nu))
+            u_mats.append(self._eval_basis(i, x[i-1,...], nu))
         return u_mats
 
     def __call__(self, x, nus=0):
