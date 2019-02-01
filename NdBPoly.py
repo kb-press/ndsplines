@@ -119,7 +119,7 @@ class NDBPoly(object):
         y_out = np.einsum(self.coeffs, self.input_op, *u_args, self.output_op)
         return y_out
 
-def make_interp_spline(x, y, bcs=0):
+def make_interp_spline(x, y, bcs=0, orders=3):
     if isinstance(x, np.ndarray): # mesh
         if x.ndim == 1:
             ndim = 1
@@ -147,10 +147,10 @@ def make_interp_spline(x, y, bcs=0):
     # generally, x.shape = (ndim, n1, n2, ..., n_ndim)
     # and y.sahpe = (mdim, n1, n2, ..., n_ndim)
     bcs = np.broadcast_to(bcs, (ndim,2))
-    orders = np.broadcast_to(3, (ndim,))
+    orders = np.broadcast_to(orders, (ndim,))
     knot_shape = np.r_[x.shape]
     deriv_specs = np.asarray((bcs[:,:]>0),dtype=np.int)
-    knot_shape[1:] = knot_shape[1:] + 4 + deriv_specs.sum(axis=1)
+    knot_shape[1:] = knot_shape[1:] + orders + 1 + deriv_specs.sum(axis=1)
 
     knots = np.zeros(knot_shape)
     coeffs = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
