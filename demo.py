@@ -60,7 +60,7 @@ plt.show()
 ##
 plt.figure()
 # plt.imshow(splinef.prod(axis=2)[0,...])
-plt.plot(newx, splinef.prod(axis=1)[0,:,0])
+# plt.plot(newx, splinef.prod(axis=0)[0,:])
 plt.show()
 
 
