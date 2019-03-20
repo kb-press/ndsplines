@@ -1,6 +1,9 @@
 from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
+import os, sys
+
+os.chdir(os.path.expanduser('~/Projects/ndsplines'))
 
 # ndimage.spline_filter1d()
 
@@ -13,7 +16,7 @@ tck = interpolate.splprep(x=np.ones_like(x).reshape(1,-1), u=x.squeeze(), s=0)[0
 t = tck[0]
 k = tck[2]
 c_max = t.size-4
-
+"""
 plt.figure()
 for idx in range(c_max):
     c = np.r_[0:0:idx*1j, 1, 0:0:(c_max-idx-1)*1j]
@@ -24,7 +27,7 @@ for idx in range(c_max):
     # plt.plot(xx.squeeze(), out.squeeze(), '--C'+str(idx))
 plt.plot(x, np.zeros_like(x), 'kx')
 plt.plot(t, np.arange(t.shape[0])*1/t.max(), 'C0o', alpha=0.5)
-
+"""
 import NdBPoly
 import importlib
 
@@ -32,12 +35,20 @@ importlib.reload(NdBPoly)
 ells = NdBPoly.find_intervals(t, xx.squeeze(), 3, True)
 plt.step(xx.squeeze(), ells*1/t.max())
 bases = NdBPoly.eval_bases(t, xx.squeeze(), ells, 3, 0)
-
+bases2 = NdBPoly.process_bases_call(t, xx.squeeze(), 3, extrapolate=True)
+"""
 plt.figure()
 for ell in np.unique(ells):
     for idx in range(4):
         plt.plot(xx[0,ells==ell], bases[idx, ells==ell])
 plt.step(xx.squeeze(), ells*1/t.max())
+plt.show()
+"""
+plt.figure()
+for idx in range(4):
+    
+    plt.plot(xx[0], bases2[idx, :])
+    plt.plot(xx[0], bases[idx, :] , '--')
 plt.show()
 
 ##

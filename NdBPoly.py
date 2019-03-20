@@ -90,7 +90,7 @@ def eval_bases(t, x, ell, k, nu):
             u[n, ~neq_test] = 0.0
 
             # I'm not sure if using these views are cythonizable, but might
-            # be faster in Numpy?
+            # be faster in Python+Numpy?
             xb = bounds[0, neq_test]
             xa = bounds[1, neq_test]
             xx = x[neq_test]
@@ -99,7 +99,7 @@ def eval_bases(t, x, ell, k, nu):
             u[n, neq_test] = tau*(xx - xa)
             
         # w[:j] = u[:j]
-        w[:] = u[:3].copy()
+        w[:] = u[:k].copy()
 
     for j in range(k-nu+1, k+1):
         u[0,:] = 0
@@ -117,12 +117,12 @@ def eval_bases(t, x, ell, k, nu):
             u[n-1, neq_test] -= tau
             u[n, neq_test] = tau
 
-        w[:j] = u[:j]
+        w[:] = u[:k].copy()
 
     return u
 
 
-def process_bases(t, x, k, nu, periodic, extrapolate):
+def process_bases_call(t, x, k, nu=0, periodic=False, extrapolate=True):
     """
 
     Similar to scipy\\interpolate\\_bsplines.py BSpline.__call__
@@ -132,14 +132,18 @@ def process_bases(t, x, k, nu, periodic, extrapolate):
     """
     x_shape, x_ndim = x.shape, x.ndim
     x = np.ascontiguousarray(x.ravel(), dtype=np.float_)
+
     if periodic:
         n = t.size - k - 1
         x = t[k] + (x - t[k]) % (t[n] - t[k])
-        ell = find_intervals(t, x, False)
+        ell = find_intervals(t, x, k, False)
     else:
-        ell = find_intervals(t, x, extrapolate)
+        ell = find_intervals(t, x, k, extrapolate)
 
-    ell==-1
+    u = eval_bases(t, x, ell, k, nu)
+    u.reshape((k+1,)+x_shape)
+
+    return u
 
 
     
@@ -148,8 +152,8 @@ class NDBPoly(object):
     def __init__(self, knots, coeffs, orders=3, periodicity=False):
         self.knots = knots
         self.coeffs = coeffs
-        self.ndim = knots.shape[0]
-        self.mdim = coeffs.shape[0]
+        self.ndim = knots.shape[0] # dimension of knots
+        self.mdim = coeffs.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodicity = np.broadcast_to(periodicity, (self.ndim,))
 
