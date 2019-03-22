@@ -18,7 +18,7 @@ extrap = 0
 periodic = -1
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
-def find_intervals(t, x, k, extrapolate=False):
+def find_intervals(t, k, x, extrapolate=False):
     """
     Find an interval ell such that t[ell] <= x < t[ell+1].
 
@@ -50,7 +50,7 @@ def find_intervals(t, x, k, extrapolate=False):
     ell[where_test[1]] = where_test[0]
     return ell
 
-def eval_bases(t, x, ell, k, nu):
+def eval_bases(t, k, x, ell, nu):
     """
     Evaluate the k+1 non-zero spline basis functions for x
 
@@ -122,7 +122,7 @@ def eval_bases(t, x, ell, k, nu):
     return u
 
 
-def process_bases_call(t, x, k, nu=0, periodic=False, extrapolate=True):
+def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
     """
 
     Similar to scipy\\interpolate\\_bsplines.py BSpline.__call__
@@ -136,11 +136,11 @@ def process_bases_call(t, x, k, nu=0, periodic=False, extrapolate=True):
     if periodic:
         n = t.size - k - 1
         x = t[k] + (x - t[k]) % (t[n] - t[k])
-        ell = find_intervals(t, x, k, False)
+        ell = find_intervals(t, k, x, False)
     else:
-        ell = find_intervals(t, x, k, extrapolate)
+        ell = find_intervals(t, k, x, extrapolate)
 
-    u = eval_bases(t, x, ell, k, nu)
+    u = eval_bases(t, k, x, ell, nu)
     u.reshape((k+1,)+x_shape)
 
     return u
@@ -149,13 +149,14 @@ def process_bases_call(t, x, k, nu=0, periodic=False, extrapolate=True):
     
 
 class NDBPoly(object):
-    def __init__(self, knots, coeffs, orders=3, periodicity=False):
+    def __init__(self, knots, coeffs, orders=3, periodic=False, extrapolate=True):
         self.knots = knots
         self.coeffs = coeffs
         self.ndim = knots.shape[0] # dimension of knots
         self.mdim = coeffs.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
-        self.periodicity = np.broadcast_to(periodicity, (self.ndim,))
+        self.periodic = np.broadcast_to(periodic, (self.ndim,))
+        self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,))
 
         self.u_ops = []
         self.input_op = list(range(self.ndim+1)) + [...,]
@@ -172,38 +173,13 @@ class NDBPoly(object):
             ts = self.knots[knot_sel]
             self.tcks.append((ts, cs, order))
 
-    def broadcast_coords(self, coords):
-        if coords.shape[0] == self.ndim:
-            if coords.size == self.ndim:
-                coords = coords.reshape((self.ndim, 1))
-        elif coords.size%self.ndim == 0:
-            coords = coords.reshape((self.ndim,-1))
-        else:
-            raise ValueError("Could not broadcast coords")
-        return coords
-
-    def indices_from_coords(self, coords):
-        indices = np.ones_like(coords, dtype=np.int_)*-1000
-        vec_sel = (slice(None),) + (coords.ndim-1)*(None,)
-        for k in range(self.ndim):
-            knot_sel = (k,) + (0,)*(k) + (slice(None,None),) + (0,)*(self.ndim-k-1)
-            lt_test = self.knots[knot_sel][vec_sel] >= coords[k, ...]
-            ge_test =  coords[k, ...] >= self.knots[knot_sel][vec_sel]
-            total_test = np.r_['0,{}'.format(coords.ndim-1), 
-                (self.knots[knot_sel][vec_sel] >= 
-                    coords[k, ...])[0,...][None,...],
-                    
-                lt_test[1:,...] & ge_test[:-1,...],
-                
-                (self.knots[knot_sel][vec_sel] <=
-                    coords[k, ...])[-1,...][None,...],
-            ]
-            
-            where_out = np.nonzero(total_test)
-            indices[(k,)+where_out[1:]] = where_out[0] - 1
-
     def _eval_basis(self, dim, x, nu=0):
-        return interpolate.splev(x, self.tcks[dim-1], nu)
+        return process_bases_call(
+            *self.tcks[dim-1][0,1], 
+            x,
+            np.broadcast_to(nu, (self.ndim,))[dim-1],
+            self.periodic[dim-1]) 
+        # interpolate.splev(x, self.tcks[dim-1], nu)
 
     def _eval_bases(self, x, nus=0):
         """
@@ -244,6 +220,24 @@ class NDBPoly(object):
         return u_mats
 
     def __call__(self, x, nus=0):
+
+        x_shape, x_ndim = x.shape, x.ndim
+        x = np.ascontiguousarray(x.ravel(), dtype=np.float_)
+
+        if periodic:
+            n = t.size - k - 1
+            x = t[k] + (x - t[k]) % (t[n] - t[k])
+            ell = find_intervals(t, k, x, False)
+        else:
+            ell = find_intervals(t, k, x, extrapolate)
+
+        u = eval_bases(t, k, x, ell, nu)
+        u.reshape((k+1,)+x_shape)
+
+
+
+        
+
         u_mats = self._eval_bases(x, nus)
         u_args = [subarg for arg in zip(u_mats, self.u_ops) for subarg in arg]
         y_out = np.einsum(self.coeffs, self.input_op, *u_args, self.output_op)
@@ -310,4 +304,4 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coeffs[coeff_line_sel] = line_spline.c.T
         knots[i-1,...] = (line_spline.t[(None,)*(i-1) + 
             (slice(None),) + (None,)*(ndim-i)])
-    return NDBPoly(knots, coeffs, orders, np.all(bcs==-1, axis=1))
+    return NDBPoly(knots, coeffs, orders, np.all(bcs==periodic, axis=1))

@@ -32,10 +32,10 @@ import NdBPoly
 import importlib
 
 importlib.reload(NdBPoly)
-ells = NdBPoly.find_intervals(t, xx.squeeze(), 3, True)
+ells = NdBPoly.find_intervals(t, 3, xx.squeeze(), True)
 plt.step(xx.squeeze(), ells*1/t.max())
-bases = NdBPoly.eval_bases(t, xx.squeeze(), ells, 3, 0)
-bases2 = NdBPoly.process_bases_call(t, xx.squeeze(), 3, extrapolate=True)
+bases = NdBPoly.eval_bases(t, 3, xx.squeeze(), ells, 0)
+bases2 = NdBPoly.process_bases_call(t, 3, xx.squeeze(), extrapolate=True)
 """
 plt.figure()
 for ell in np.unique(ells):
