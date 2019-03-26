@@ -16,6 +16,7 @@ pinned = 2
 clamped = 1
 extrap = 0
 periodic = -1
+
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 def find_intervals(t, k, x, extrapolate=False):
@@ -191,7 +192,7 @@ class NDBPoly(object):
         self.mdim = coeffs.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
-        self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,))
+        self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
 
         self.u_ops = []
         self.input_op = list(range(self.ndim+1)) + [...,]
@@ -230,30 +231,38 @@ class NDBPoly(object):
         uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
         c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
         cc_sel = np.empty(c_shape, dtype=np.int_)
-        # ccs = np.empty(c_shape, dtype=np.float_)
-        # how to efficiently fill in the CC's? Once they are filled, I think the einsum is straightforward
-        # probably generate indexers and fill in by view. can I have a fixed meshgrid that I just add to the Ell's in each dimension somehow?
 
         for i in np.arange(self.ndim):
             t = self.knots_vec[i]
             k = self.orders[i]
             nu = nus[i]
-            if self.periodic[i-1]:
+            if self.periodic[i]:
                 n = t.size - k - 1
                 x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
                 ell = find_intervals(t, k, x[i,:], False)
             else:
-                ell = find_intervals(t, k, x[i,:], self.extrapolate[i-1])
+                if not self.extrapolate[i,0]:
+                    lt_sel = x[i,:] < t[k]
+                    x[i,lt_sel] = t[k]
+                if not self.extrapolate[i,1]:
+                    gte_sel = t[-k-1] < x[i,:]
+                    x[i,gte_sel] = t[-k-1] 
+                ell = find_intervals(t, k, x[i,:], True)
 
             ells[i,:] = ell
-
             uus[i, :k+1, :] = eval_bases(t, k, x[i,:], ell, nu)
             cc_sel[i, ...] = self.cc_sel_base[i][..., None] + ell - k
             
         ccs = self.coeffs[(slice(None),) + tuple(cc_sel)]
-        # I am really not sure why the operations and uu arrays are in the opposite order than I would expect
-        y_out = np.einsum(ccs, self.input_op, *[subarg for arg in zip(uus[::-1], self.u_ops) for subarg in arg], self.output_op)
-        return y_out.reshape((self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
+        # TODO: why do the uus and u_ops go in the opposite order from what I 
+        # expect? 
+
+        y_out = np.einsum(ccs, self.input_op, 
+            *[subarg for arg in zip(uus[::-1], self.u_ops) for subarg in arg], 
+            self.output_op)
+        y_out = y_out.reshape(
+                    (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
+        return y_out
 
 
 def make_interp_spline(x, y, bcs=0, orders=3):
@@ -317,4 +326,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coeffs[coeff_line_sel] = line_spline.c.T
         knots[i-1,...] = (line_spline.t[(None,)*(i-1) + 
             (slice(None),) + (None,)*(ndim-i)])
-    return NDBPoly(knots, coeffs, orders, np.all(bcs==periodic, axis=1))
+    return NDBPoly(knots, coeffs, orders, 
+        np.all(bcs==periodic, axis=1),
+        (bcs %2)==0)
