@@ -38,7 +38,7 @@ skip_size = 32
 plt.figure()
 
 # plt.plot(xx, ndimage_out[0,...])
-plot_sel = [0,]
+plot_sel = [0,-1]
 for test_bc in test_bcs[plot_sel,:]:
     test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc))
     
@@ -54,28 +54,5 @@ for test_bc in test_bcs[plot_sel,:]:
     plt.plot(xx, NDsplienf.squeeze(), )
     
 plt.legend()
-    
-
 plt.plot(x, fvals, 'o')
-
-plt.show()
-
-
-##
-
-factor = 2
-xx = np.r_[-1:1:500j]*factor*np.pi/2
-# xx = np.unique(np.r_[-1:1:10j]) * np.pi
-indices = testpoly.indices_from_coords(xx)
-# print(indices)
-# new_coords, aliasing_mask, dxs = testpoly.transform_coord_to_pixel(xx)
-newf = testpoly.evaluate(xx.reshape(1,-1))
-splinef = test_Bspline(xx)
-
-testpoly.coeffs[0][1:-1] - test_Bspline.c[2:-2] # great, B-splines use the cardinal basis, so we good
-
-plt.figure()
-plt.plot(xx, newf.squeeze(), 'o')
-plt.plot(xx, splinef.squeeze(), 'x')
-plt.plot(x, fvals, 'x')
 plt.show()
