@@ -1,10 +1,15 @@
 from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
+import importlib
+import os
+import itertools
+
+os.chdir(os.path.expanduser('~/Projects/ndsplines'))
+
 import NdBPoly
 import ndimage_ndpoly
-import importlib
-import itertools
+
 
 importlib.reload(NdBPoly)
 importlib.reload(ndimage_ndpoly)
@@ -28,15 +33,16 @@ test_bcs = list(itertools.chain(
     ((None,None),),
 ))
 NDspline_dict = {"natural": NdBPoly.pinned, "clamped": NdBPoly.clamped, None: -1}
+NDspline_dict = {"natural": NdBPoly.pinned, "clamped": NdBPoly.clamped, None: 0}
 skip_size = 32
 plt.figure()
 
-plt.plot(xx, ndimage_out[0,...])
-# for test_bc in test_bcs:
-#     test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=test_bc)
-#     
-#     splinef = test_Bspline(xx)
-#     plt.plot(xx[::skip_size], splinef[::skip_size],'x')
+# plt.plot(xx, ndimage_out[0,...])
+for test_bc in test_bcs:
+    test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=test_bc)
+    
+    splinef = test_Bspline(xx)
+    plt.plot(xx[::skip_size], splinef[::skip_size],'x')
     
     
 plt.gca().set_prop_cycle(None)
@@ -44,7 +50,7 @@ plt.gca().set_prop_cycle(None)
 for test_bc in test_bcs:
     test_NDBspline = NdBPoly.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
     NDsplienf = test_NDBspline(xx)
-    plt.plot(xx, NDsplienf.squeeze())
+    plt.plot(xx, NDsplienf.squeeze(), )
     
 
 plt.plot(x, fvals, 'o')
@@ -52,7 +58,7 @@ plt.plot(x, fvals, 'o')
 plt.show()
 
 
-
+##
 
 factor = 2
 xx = np.r_[-1:1:500j]*factor*np.pi/2

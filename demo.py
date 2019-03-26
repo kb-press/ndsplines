@@ -1,9 +1,14 @@
 from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
+import importlib
+import os
+
+os.chdir(os.path.expanduser('~/Projects/ndsplines'))
+
 import NdBPoly
 import ndimage_ndpoly
-import importlib
+
 
 importlib.reload(NdBPoly)
 importlib.reload(ndimage_ndpoly)
@@ -41,7 +46,7 @@ plt.gca().set_prop_cycle(None)
 
 plt.gca().set_prop_cycle(None)
 splinef = test_NDBspline(newxymesh)
-plt.plot(newx, splinef[0,...], alpha=0.75)
+plt.plot(newx, splinef.reshape(-1,1024,5)[0], alpha=0.75)
 
 # plt.gca().set_prop_cycle(None)
 # splinef = test_NDBspline(newxymesh, nus=[0,1])

@@ -26,10 +26,10 @@ def find_intervals(t, k, x, extrapolate=False):
     ----------
     t : ndarray, shape=(n+k+1,) dtype=np.float_
         knots
-    x : ndarray, shape=(s,) dtype=np.float_
-        values to find the interval for
     k : int
         order of B-spline
+    x : ndarray, shape=(s,) dtype=np.float_
+        values to find the interval for
     extrapolate : bool
         whether to return the last or the first interval if xval
         is out of bounds.
@@ -44,13 +44,13 @@ def find_intervals(t, k, x, extrapolate=False):
     test = (t[:-1,None] <= x[None,:]) & (x[None,:] < t[1:,None])
     ell = np.ones_like(x, dtype=np.int_)*-1
     if extrapolate:
-        test[k,:] = test[k,:] | (x <= t[k])
-        test[-k-1,:] = test[-k-1,:] | (t[-k-1] < x)
+        test[k,:] = test[k,:] | (x < t[k])
+        test[-k-1,:] = test[-k-1,:] | (t[-k-1] <= x)
     where_test = np.where(test)
     ell[where_test[1]] = where_test[0]
     return ell
 
-def eval_bases(t, k, x, ell, nu):
+def eval_bases(t, k, x, ell, nu=0):
     """
     Evaluate the k+1 non-zero spline basis functions for x
 
@@ -58,12 +58,12 @@ def eval_bases(t, k, x, ell, nu):
     ----------
     t : ndarray, shape=(n+k+1,) dtype=np.float_
         knots
+    k : int
+        order of B-spline.
     x : ndarray, shape=(s,) dtype=np.float_
         values to find the interval for
     ell : ndarray, shape=(s,) dtype=np.int_
         index such that t[ell] <= x < t[ell+1] for each x
-    k : int
-        order of B-spline.
     nu : int
         order of derivative to evaluate.
 
@@ -129,6 +129,28 @@ def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
 
     which goes through BSpline._evaluate and onto
     scipy\\interpolate\\_bspl.pyx evaluate_spline
+
+    more or less equivalent to splev
+
+    Parameters
+    ----------
+    t : ndarray, shape=(n+k+1,) dtype=np.float_
+        knots
+    x : ndarray, shape=(s,) dtype=np.float_
+        values to find the interval for
+    k : int
+        order of B-spline
+    periodic : bool
+        whether to wrap the x values to evaluate a periodic spline
+    extrapolate : bool
+        whether to return the last or the first interval if xval
+        is out of bounds.
+
+    Returns
+    -------
+    u : ndarray, shape=(k+1,s,) dtype=np.float_
+        value of 
+
     """
     x_shape, x_ndim = x.shape, x.ndim
     x = np.ascontiguousarray(x.ravel(), dtype=np.float_)
@@ -150,6 +172,19 @@ def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
 
 class NDBPoly(object):
     def __init__(self, knots, coeffs, orders=3, periodic=False, extrapolate=True):
+        """
+        Parameters
+        ----------
+        knots : ndarray, shape=(ndim, n_1+orders[i-1], ..., n_ndim+orders[-1]), dtype=np.float_
+        coeffs : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
+        orders : ndarray, shape=(ndim,), dtype=np.int_
+        periodic : ndarray, shape=(ndim,), dtype=np.bool_
+        extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
+
+        TODO: maybe we don't need to include an extrapolate here? the user
+        can restrict the inputs on __call__?
+            
+        """
         self.knots = knots
         self.coeffs = coeffs
         self.ndim = knots.shape[0] # dimension of knots
@@ -161,87 +196,64 @@ class NDBPoly(object):
         self.u_ops = []
         self.input_op = list(range(self.ndim+1)) + [...,]
         self.output_op = [0,...]
-        self.tcks = []
+        self.knots_vec = []
+        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders])
 
         for i in np.arange(self.ndim)+1:
             self.u_ops.append([int(i), ...])
-            num_bases = self.coeffs.shape[i]
-            cs = np.eye(num_bases)
-            order = self.orders[i-1]
             knot_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) + 
                 (0,)*(self.ndim-i))
-            ts = self.knots[knot_sel]
-            self.tcks.append((ts, cs, order))
-
-    def _eval_basis(self, dim, x, nu=0):
-        return process_bases_call(
-            *self.tcks[dim-1][0,1], 
-            x,
-            np.broadcast_to(nu, (self.ndim,))[dim-1],
-            self.periodic[dim-1]) 
-        # interpolate.splev(x, self.tcks[dim-1], nu)
-
-    def _eval_bases(self, x, nus=0):
-        """
-        Evaluate a spline function.
-
-        Parameters
-        ----------
-        x : array_like
-            points to evaluate the spline at.
-        nu: int, optional
-            derivative to evaluate (default is 0).
-
-        Returns
-        -------
-        y : array_like
-            Shape is determined by replacing the interpolation axis
-            in the coefficient array with the shape of `x`.
-
-        """
-        nus = np.broadcast_to(nus, (self.ndim,))
-        x = self.broadcast_coords(x)
-
-        # TODO: IMPLEMENT PERIODIC BC
-        # periodic_sel = np.all(self.bcs==-1, axis=1)
-        # ns = np.r_[self.knots.shape[1:]] - self.order - 1
-        # x[periodic_sel,...] = self.knots[periodic_sel, self.order[periodic_sel]]
-        """
-        # With periodic extrapolation we map x to the segment
-        # [self.t[k], self.t[n]].        
-        n = self.knots.shape[1:][periodic_sel] - self.order - 1
-        x[] = self.t[self.k] + (x - self.t[self.k]) % (self.t[n] -
-                                                     self.t[self.k])
-        """
-        u_mats = []        
-        for i in np.arange(self.ndim)+1:
-            nu = nus[i-1]
-            u_mats.append(self._eval_basis(i, x[i-1,...], nu))
-        return u_mats
+            self.knots_vec.append(self.knots[knot_sel])
 
     def __call__(self, x, nus=0):
-
+        """
+        Parameters
+        ----------
+        x : ndarray, shape=(self.ndim,...) dtype=np.float_
+        nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.int_
+            
+        """
         x_shape, x_ndim = x.shape, x.ndim
-        x = np.ascontiguousarray(x.ravel(), dtype=np.float_)
+        x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
+        num_points = x.shape[-1]
+        nus = np.broadcast_to(nus, (self.ndim,))
 
-        if periodic:
-            n = t.size - k - 1
-            x = t[k] + (x - t[k]) % (t[n] - t[k])
-            ell = find_intervals(t, k, x, False)
-        else:
-            ell = find_intervals(t, k, x, extrapolate)
+        # TODO: figure out how to pass in work-spaces to save memory allocation
+        # this might give a way of using the process_bases_call function
+        # instead of repeating this logic. Keeping the work-space as attribute of
+        # the NdBPoly object should be as useful as needed
 
-        u = eval_bases(t, k, x, ell, nu)
-        u.reshape((k+1,)+x_shape)
+        # TODO: possibly keep a workspace as an attribute and re-use it if new call
+        # has the same shape.
 
+        ells = np.empty(x.shape, dtype=np.int_)
+        uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
+        c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
+        cc_sel = np.empty(c_shape, dtype=np.int_)
+        # ccs = np.empty(c_shape, dtype=np.float_)
+        # how to efficiently fill in the CC's? Once they are filled, I think the einsum is straightforward
+        # probably generate indexers and fill in by view. can I have a fixed meshgrid that I just add to the Ell's in each dimension somehow?
 
+        for i in np.arange(self.ndim)+1:
+            t = self.knots_vec[i-1]
+            k = self.orders[i-1]
+            nu = nus[i-1]
+            if self.periodic[i-1]:
+                n = t.size - k - 1
+                x[i-1,:] = t[k] + (x[i-1,:] - t[k]) % (t[n] - t[k])
+                ell = find_intervals(t, k, x[i-1,:], False)
+            else:
+                ell = find_intervals(t, k, x[i-1,:], self.extrapolate[i-1])
 
-        
+            ells[i-1,:] = ell
 
-        u_mats = self._eval_bases(x, nus)
-        u_args = [subarg for arg in zip(u_mats, self.u_ops) for subarg in arg]
-        y_out = np.einsum(self.coeffs, self.input_op, *u_args, self.output_op)
-        return y_out
+            uus[i-1, :k+1, :] = eval_bases(t, k, x[i-1,:], ell, nu)
+            cc_sel[i-1, ...] = self.cc_sel_base[i-1][..., None] + ell - self.orders[i-1]
+            
+        ccs = self.coeffs[(slice(None),) + tuple(cc_sel)]
+        y_out = np.einsum(ccs, self.input_op, *[subarg for arg in zip(uus, self.u_ops) for subarg in arg], self.output_op)
+        return y_out#.reshape((self.mdim,) + x_shape[1:])
+
 
 def make_interp_spline(x, y, bcs=0, orders=3):
     if isinstance(x, np.ndarray): # mesh
