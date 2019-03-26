@@ -34,6 +34,8 @@ skip_size = 32
 
 test_NDBspline = NdBPoly.make_interp_spline(input_coords, fvals, bcs=(NdBPoly.clamped))
 
+np.allclose(test_NDBspline(input_coords),fvals)
+
 plt.figure()
 plt.plot(x, np.zeros_like(x), 'kx')
 plt.plot(newx[::skip_size], truef[::skip_size,:], 'x')
@@ -46,7 +48,7 @@ plt.gca().set_prop_cycle(None)
 
 plt.gca().set_prop_cycle(None)
 splinef = test_NDBspline(newxymesh)
-plt.plot(newx, splinef.reshape(-1,1024,5)[0], alpha=0.75)
+plt.plot(newx, splinef[0,:,:], alpha=0.75)
 
 # plt.gca().set_prop_cycle(None)
 # splinef = test_NDBspline(newxymesh, nus=[0,1])

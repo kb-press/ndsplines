@@ -234,25 +234,26 @@ class NDBPoly(object):
         # how to efficiently fill in the CC's? Once they are filled, I think the einsum is straightforward
         # probably generate indexers and fill in by view. can I have a fixed meshgrid that I just add to the Ell's in each dimension somehow?
 
-        for i in np.arange(self.ndim)+1:
-            t = self.knots_vec[i-1]
-            k = self.orders[i-1]
-            nu = nus[i-1]
+        for i in np.arange(self.ndim):
+            t = self.knots_vec[i]
+            k = self.orders[i]
+            nu = nus[i]
             if self.periodic[i-1]:
                 n = t.size - k - 1
-                x[i-1,:] = t[k] + (x[i-1,:] - t[k]) % (t[n] - t[k])
-                ell = find_intervals(t, k, x[i-1,:], False)
+                x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
+                ell = find_intervals(t, k, x[i,:], False)
             else:
-                ell = find_intervals(t, k, x[i-1,:], self.extrapolate[i-1])
+                ell = find_intervals(t, k, x[i,:], self.extrapolate[i-1])
 
-            ells[i-1,:] = ell
+            ells[i,:] = ell
 
-            uus[i-1, :k+1, :] = eval_bases(t, k, x[i-1,:], ell, nu)
-            cc_sel[i-1, ...] = self.cc_sel_base[i-1][..., None] + ell - self.orders[i-1]
+            uus[i, :k+1, :] = eval_bases(t, k, x[i,:], ell, nu)
+            cc_sel[i, ...] = self.cc_sel_base[i][..., None] + ell - k
             
         ccs = self.coeffs[(slice(None),) + tuple(cc_sel)]
-        y_out = np.einsum(ccs, self.input_op, *[subarg for arg in zip(uus, self.u_ops) for subarg in arg], self.output_op)
-        return y_out#.reshape((self.mdim,) + x_shape[1:])
+        # I am really not sure why the operations and uu arrays are in the opposite order than I would expect
+        y_out = np.einsum(ccs, self.input_op, *[subarg for arg in zip(uus[::-1], self.u_ops) for subarg in arg], self.output_op)
+        return y_out.reshape((self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
 
 
 def make_interp_spline(x, y, bcs=0, orders=3):
