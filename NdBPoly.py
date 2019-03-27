@@ -1,8 +1,5 @@
-from scipy import ndimage, interpolate
-import matplotlib.pyplot as plt
 import numpy as np
-from numpy.lib.arraypad import _validate_lengths
-from functools import reduce
+from scipy import interpolate
 
 """
 TODOs:
