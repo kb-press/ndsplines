@@ -16,7 +16,7 @@ periodic = -1
 
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
-def find_intervals(t, k, x, extrapolate=False):
+def find_intervals(t, k, x, extrapolate=False, workspace=None):
     """
     Find an interval ell such that t[ell] <= x < t[ell+1].
 
@@ -37,18 +37,43 @@ def find_intervals(t, k, x, extrapolate=False):
     ell : ndarray, shape=(s,) dtype=np.int_
         Suitable interval or -1 for each value in x
 
+    Notes
+    -----
     Similar to scipy\\interpolate\\_bspl.pyx find_Interval (inline)
     """
-    test = (t[:-1,None] <= x[None,:]) & (x[None,:] < t[1:,None])
-    ell = np.ones_like(x, dtype=np.int_)*-1
+    if x.ndim != 1:
+        raise ValueError("expected 1-dimensional x")
+
+    do_return = False
+    if (not isinstance(workspace, np.ndarray) or 
+            (workspace.dtype != np.int_) or
+            (workspace.shape[0] != t.shape[0]) or
+            (workspace.shape[1] < x.shape[0])):
+        workspace = np.empty((t.shape[0], x.shape[0]), dtype=np.int_)
+        do_return = True
+    
+    ell = workspace[0,:x.shape[0]]
+
+    # TODO: I am assuming memory is cheap and I don't get much for typing
+    # the test array as bool_ vs int_
+    test = workspace[1:,:x.shape[0]]
+
+    ell[:] = -1
+    test[:,:x.shape[0]] = (t[:-1,None] <= x[None,:]) & (x[None,:] < t[1:,None])
+    
     if extrapolate:
-        test[k,:] = test[k,:] | (x < t[k])
-        test[-k-1,:] = test[-k-1,:] | (t[-k-1] <= x)
+        test[k,:x.shape[0]] = test[k,:x.shape[0]] | (x < t[k])
+        test[-k-1,:x.shape[0]] = test[-k-1,:x.shape[0]] | (t[-k-1] <= x)
+
+    # TODO: can we pre-allocate this? or is there a better way to implement
+    # this whole function?
     where_test = np.where(test)
     ell[where_test[1]] = where_test[0]
-    return ell
 
-def eval_bases(t, k, x, ell, nu=0):
+    if do_return:
+        return ell
+
+def eval_bases(t, k, x, ell, nu=0, workspace=None):
     """
     Evaluate the k+1 non-zero spline basis functions for x
 
@@ -70,11 +95,25 @@ def eval_bases(t, k, x, ell, nu=0):
     u : ndarray, shape=(k+1, s) dtype=np.float_
         the values of the non-zero spline basis functions evaluated at x
 
+    Notes
+    -----
     similar to scipy\\interpolate\\src\\__fitpack.h _deBoor_D (inline)
     """
-    u = np.empty((k+1, x.size), dtype=np.float_)
-    w = np.empty((k, x.size), dtype=np.float_)
-    bounds = np.empty((2,x.size),)
+
+    if x.ndim != 1:
+        raise ValueError("expected 1-dimensional x")
+
+    do_return = False
+    if (not isinstance(workspace, np.ndarray) or 
+            (workspace.dtype != np.float_) or
+            (workspace.shape[0] != 2*k+3) or
+            (workspace.shape[1] < x.size)):
+        workspace = np.empty((2*k+3, x.size), dtype=np.float_)
+        do_return = True
+
+    u = workspace[:k+1,:]
+    w = workspace[k+1:2*k+1,:]
+    bounds = workspace[2*k+1:,:]
     
     w[0,...] = 1.0
     for j in range(1, k-nu+1):
@@ -117,7 +156,8 @@ def eval_bases(t, k, x, ell, nu=0):
 
         w[:] = u[:k].copy()
 
-    return u
+    if do_return:
+        return u
 
 
 def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
@@ -147,7 +187,7 @@ def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
     Returns
     -------
     u : ndarray, shape=(k+1,s,) dtype=np.float_
-        value of 
+        value of
 
     """
     x_shape, x_ndim = x.shape, x.ndim
@@ -179,6 +219,8 @@ class NDBPoly(object):
         periodic : ndarray, shape=(ndim,), dtype=np.bool_
         extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
 
+        Notes
+        -----
         TODO: maybe we don't need to include an extrapolate here? the user
         can restrict the inputs on __call__?
             
@@ -196,12 +238,77 @@ class NDBPoly(object):
         self.output_op = [0,...]
         self.knots_vec = []
         self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders])
+        self.eval_work = []
+        self.ell_work = []
+        self.cur_max_x_size = 1
 
         for i in np.arange(self.ndim)+1:
             self.u_ops.append([int(i), ...])
             knot_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) + 
                 (0,)*(self.ndim-i))
             self.knots_vec.append(self.knots[knot_sel])
+
+            self.ell_work.append(
+                np.empty((self.knots_vec[-1].shape[0],self.cur_max_x_size),dtype=np.int_))
+
+            self.eval_work.append(
+                np.empty((2*self.orders[i-1]+3,self.cur_max_x_size),dtype=np.float_))
+
+    def get_us_and_cc_sel(self, x, nus=0):
+        """
+        Parameters
+        ----------
+        x : ndarray, shape=(self.ndim, s) dtype=np.float_
+        nus : ndarray, shape=(self.ndim,) dtype=np.int_
+        """
+        num_points = x.shape[-1]
+        ells = np.empty(x.shape, dtype=np.int_)
+        uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
+        c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
+        cc_sel = np.empty(c_shape, dtype=np.int_)
+
+
+        # TODO: figure out how to pass in work-spaces to save memory allocation
+        # this might give a way of using the process_bases_call function
+        # instead of repeating this logic. Keeping the work-space as attribute of
+        # the NdBPoly object should be as useful as needed
+
+        # TODO: possibly keep a workspace as an attribute and re-use it if new call
+        # has the same shape.
+
+        for i in np.arange(self.ndim):
+            t = self.knots_vec[i]
+            k = self.orders[i]
+            nu = nus[i]
+            if self.periodic[i]:
+                n = t.size - k - 1
+                x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
+                find_intervals(t, k, x[i,:], False, self.ell_work[i])
+            else:
+                if not self.extrapolate[i,0]:
+                    lt_sel = x[i,:] < t[k]
+                    x[i,lt_sel] = t[k]
+                if not self.extrapolate[i,1]:
+                    gte_sel = t[-k-1] < x[i,:]
+                    x[i,gte_sel] = t[-k-1] 
+                find_intervals(t, k, x[i,:], True, self.ell_work[i])
+
+            ell = ells[i,:] = self.ell_work[i][0,:num_points]
+
+            eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
+            uus[i, :k+1, :] = self.eval_work[i][:k+1, :num_points]
+            cc_sel[i, ...] = self.cc_sel_base[i][..., None] + ell - k
+        return cc_sel, uus
+
+    def check_workspace_shapes(self, x):
+        if self.cur_max_x_size < x.shape[-1]:
+            self.cur_max_x_size = x.shape[-1]
+            for i in np.arange(self.ndim):
+                self.ell_work[i] = \
+                    np.empty((self.knots_vec[i].shape[0],self.cur_max_x_size),dtype=np.int_)
+
+                self.eval_work[i] = \
+                    np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_)
 
     def __call__(self, x, nus=0):
         """
@@ -213,42 +320,11 @@ class NDBPoly(object):
         """
         x_shape, x_ndim = x.shape, x.ndim
         x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
-        num_points = x.shape[-1]
         nus = np.broadcast_to(nus, (self.ndim,))
 
-        # TODO: figure out how to pass in work-spaces to save memory allocation
-        # this might give a way of using the process_bases_call function
-        # instead of repeating this logic. Keeping the work-space as attribute of
-        # the NdBPoly object should be as useful as needed
 
-        # TODO: possibly keep a workspace as an attribute and re-use it if new call
-        # has the same shape.
-
-        ells = np.empty(x.shape, dtype=np.int_)
-        uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
-        c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
-        cc_sel = np.empty(c_shape, dtype=np.int_)
-
-        for i in np.arange(self.ndim):
-            t = self.knots_vec[i]
-            k = self.orders[i]
-            nu = nus[i]
-            if self.periodic[i]:
-                n = t.size - k - 1
-                x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
-                ell = find_intervals(t, k, x[i,:], False)
-            else:
-                if not self.extrapolate[i,0]:
-                    lt_sel = x[i,:] < t[k]
-                    x[i,lt_sel] = t[k]
-                if not self.extrapolate[i,1]:
-                    gte_sel = t[-k-1] < x[i,:]
-                    x[i,gte_sel] = t[-k-1] 
-                ell = find_intervals(t, k, x[i,:], True)
-
-            ells[i,:] = ell
-            uus[i, :k+1, :] = eval_bases(t, k, x[i,:], ell, nu)
-            cc_sel[i, ...] = self.cc_sel_base[i][..., None] + ell - k
+        self.check_workspace_shapes(x)
+        cc_sel, uus = self.get_us_and_cc_sel(x, nus)        
             
         ccs = self.coeffs[(slice(None),) + tuple(cc_sel)]
         # TODO: why do the uus and u_ops go in the opposite order from what I 
