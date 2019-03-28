@@ -262,19 +262,11 @@ class NDBPoly(object):
         nus : ndarray, shape=(self.ndim,) dtype=np.int_
         """
         num_points = x.shape[-1]
-        ells = np.empty(x.shape, dtype=np.int_)
         uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
         c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
         cc_sel = np.empty(c_shape, dtype=np.int_)
 
-
-        # TODO: figure out how to pass in work-spaces to save memory allocation
-        # this might give a way of using the process_bases_call function
-        # instead of repeating this logic. Keeping the work-space as attribute of
-        # the NdBPoly object should be as useful as needed
-
-        # TODO: possibly keep a workspace as an attribute and re-use it if new call
-        # has the same shape.
+        # TODO: do I need uu's? I could change get_us_and_cc_sel and call API to not need it?
 
         for i in np.arange(self.ndim):
             t = self.knots_vec[i]
@@ -293,7 +285,7 @@ class NDBPoly(object):
                     x[i,gte_sel] = t[-k-1] 
                 find_intervals(t, k, x[i,:], True, self.ell_work[i])
 
-            ell = ells[i,:] = self.ell_work[i][0,:num_points]
+            ell = self.ell_work[i][0,:num_points]
 
             eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
             uus[i, :k+1, :] = self.eval_work[i][:k+1, :num_points]
