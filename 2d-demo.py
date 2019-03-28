@@ -36,7 +36,7 @@ test_NDBspline = NdBPoly.make_interp_spline(input_coords, fvals, bcs=(NdBPoly.cl
 # new API for extrapolate/BC behavior requires overriding to match scipy.interpolate.make_interp_spline behavior
 test_NDBspline.extrapolate = np.ones_like(test_NDBspline.extrapolate)
 
-np.allclose(test_NDBspline(input_coords),fvals)
+print(np.allclose(test_NDBspline(input_coords),fvals))
 
 plt.figure()
 plt.plot(x, np.zeros_like(x), 'kx')

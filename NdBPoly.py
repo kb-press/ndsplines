@@ -238,10 +238,10 @@ class NDBPoly(object):
         self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
 
         self.u_ops = []
-        self.input_op = list(range(self.ndim+1)) + [...,]
+        self.input_op = list(i for i in range(self.ndim+1)) + [...,]
         self.output_op = [0,...]
         self.knots_vec = []
-        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders])
+        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
         self.eval_work = []
         self.ell_work = []
         self.cur_max_x_size = 1
@@ -250,17 +250,17 @@ class NDBPoly(object):
 
         self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
         self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
-        for i in np.arange(self.ndim)+1:
-            self.u_ops.append([int(i), ...])
-            knot_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) + 
-                (0,)*(self.ndim-i))
+        for i in range(self.ndim):
+            self.u_ops.append([i+1, ...])
+            knot_sel = ((i,) + (0,)*i + (slice(None,None),) + 
+                (0,)*(self.ndim-i-1))
             self.knots_vec.append(self.knots[knot_sel])
 
             self.ell_work.append(
                 np.empty((self.knots_vec[-1].shape[0],self.cur_max_x_size),dtype=np.int_))
 
             self.eval_work.append(
-                np.empty((2*self.orders[i-1]+3,self.cur_max_x_size),dtype=np.float_))
+                np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_))
 
     def get_us_and_cc_sel(self, x, nus=0):
         """
@@ -271,7 +271,7 @@ class NDBPoly(object):
         """
         num_points = x.shape[-1]
 
-        for i in np.arange(self.ndim):
+        for i in range(self.ndim):
             t = self.knots_vec[i]
             k = self.orders[i]
             nu = nus[i]
@@ -298,7 +298,7 @@ class NDBPoly(object):
     def check_workspace_shapes(self, x):
         if self.cur_max_x_size < x.shape[-1]:
             self.cur_max_x_size = x.shape[-1]
-            for i in np.arange(self.ndim):
+            for i in range(self.ndim):
                 self.ell_work[i] = \
                     np.empty((self.knots_vec[i].shape[0],self.cur_max_x_size),dtype=np.int_)
 
@@ -331,7 +331,7 @@ class NDBPoly(object):
         # TODO: optimize einsum path, store it in case the shapes are the same
         # and/or write a memoization wrapper for the path optimizer
         y_out = np.einsum(ccs, self.input_op, 
-            *[subarg for arg in zip(uus[::-1], self.u_ops) for subarg in arg], 
+            *[subarg for arg in zip(uus, self.u_ops) for subarg in arg], 
             self.output_op)
         y_out = y_out.reshape(
                     (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
