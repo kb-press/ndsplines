@@ -44,26 +44,28 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
     if x.ndim != 1:
         raise ValueError("expected 1-dimensional x")
 
+    s = x.size
+
     do_return = False
     if (not isinstance(workspace, np.ndarray) or 
             (workspace.dtype != np.int_) or
-            (workspace.shape[0] != t.shape[0]) or
-            (workspace.shape[1] < x.shape[0])):
-        workspace = np.empty((t.shape[0], x.shape[0]), dtype=np.int_)
+            (workspace.shape[0] < t.shape[0]) or
+            (workspace.shape[1] < s)):
+        workspace = np.empty((t.shape[0], s), dtype=np.int_)
         do_return = True
     
-    ell = workspace[0,:x.shape[0]]
+    ell = workspace[0,:s]
 
     # TODO: I am assuming memory is cheap and I don't get much for typing
     # the test array as bool_ vs int_
-    test = workspace[1:,:x.shape[0]]
+    test = workspace[1:t.shape[0],:s]
 
     ell[:] = -1
-    test[:,:x.shape[0]] = (t[:-1,None] <= x[None,:]) & (x[None,:] < t[1:,None])
+    test[:,:s] = (t[:-1,None] <= x[None,:]) & (x[None,:] < t[1:,None])
     
     if extrapolate:
-        test[k,:x.shape[0]] = test[k,:x.shape[0]] | (x < t[k])
-        test[-k-1,:x.shape[0]] = test[-k-1,:x.shape[0]] | (t[-k-1] <= x)
+        test[k,:s] = test[k,:s] | (x < t[k])
+        test[-k-1,:s] = test[-k-1,:s] | (t[-k-1] <= x)
 
     # TODO: can we pre-allocate this? or is there a better way to implement
     # this whole function?
@@ -103,17 +105,19 @@ def eval_bases(t, k, x, ell, nu=0, workspace=None):
     if x.ndim != 1:
         raise ValueError("expected 1-dimensional x")
 
+    s = x.size
+
     do_return = False
     if (not isinstance(workspace, np.ndarray) or 
             (workspace.dtype != np.float_) or
-            (workspace.shape[0] != 2*k+3) or
-            (workspace.shape[1] < x.size)):
-        workspace = np.empty((2*k+3, x.size), dtype=np.float_)
+            (workspace.shape[0] < 2*k+3) or
+            (workspace.shape[1] < s)):
+        workspace = np.empty((2*k+3, s), dtype=np.float_)
         do_return = True
 
-    u = workspace[:k+1,:]
-    w = workspace[k+1:2*k+1,:]
-    bounds = workspace[2*k+1:,:]
+    u = workspace[:k+1,:s]
+    w = workspace[k+1:2*k+1,:s]
+    bounds = workspace[2*k+1:2*k+3,:s]
     
     w[0,...] = 1.0
     for j in range(1, k-nu+1):
@@ -266,7 +270,7 @@ class NDBPoly(object):
         nus : ndarray, shape=(self.ndim,) dtype=np.int_
         """
         num_points = x.shape[-1]
-        
+
         for i in np.arange(self.ndim):
             t = self.knots_vec[i]
             k = self.orders[i]
