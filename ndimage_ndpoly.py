@@ -1,6 +1,5 @@
 from scipy import ndimage
 import numpy as np
-from numpy.lib.arraypad import _validate_lengths
 
 class NdBPoly():
     def __init__(self, values, knots, order=3, mode='constant', cval=0.0, prefilter=True):
