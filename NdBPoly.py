@@ -242,6 +242,10 @@ class NDBPoly(object):
         self.ell_work = []
         self.cur_max_x_size = 1
 
+        self.c_shape_base = (self.ndim,)+tuple(self.orders+1)
+
+        self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
+        self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
         for i in np.arange(self.ndim)+1:
             self.u_ops.append([int(i), ...])
             knot_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) + 
@@ -262,12 +266,7 @@ class NDBPoly(object):
         nus : ndarray, shape=(self.ndim,) dtype=np.int_
         """
         num_points = x.shape[-1]
-        uus = np.empty((self.ndim,np.max(self.orders)+1,num_points,), dtype=np.float_)
-        c_shape = (self.ndim,)+tuple(self.orders+1)+(num_points,)
-        cc_sel = np.empty(c_shape, dtype=np.int_)
-
-        # TODO: do I need uu's? I could change get_us_and_cc_sel and call API to not need it?
-
+        
         for i in np.arange(self.ndim):
             t = self.knots_vec[i]
             k = self.orders[i]
@@ -288,9 +287,9 @@ class NDBPoly(object):
             ell = self.ell_work[i][0,:num_points]
 
             eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
-            uus[i, :k+1, :] = self.eval_work[i][:k+1, :num_points]
-            cc_sel[i, ...] = self.cc_sel_base[i][..., None] + ell - k
-        return cc_sel, uus
+            self.uus[i, :k+1, :num_points] = self.eval_work[i][:k+1, :num_points]
+            self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] + ell - k
+        return self.cc_sel[..., :num_points], self.uus[..., :num_points]
 
     def check_workspace_shapes(self, x):
         if self.cur_max_x_size < x.shape[-1]:
@@ -301,6 +300,9 @@ class NDBPoly(object):
 
                 self.eval_work[i] = \
                     np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_)
+
+            self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
+            self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
 
     def __call__(self, x, nus=0):
         """
@@ -322,6 +324,8 @@ class NDBPoly(object):
         # TODO: why do the uus and u_ops go in the opposite order from what I 
         # expect? 
 
+        # TODO: optimize einsum path, store it in case the shapes are the same
+        # and/or write a memoization wrapper for the path optimizer
         y_out = np.einsum(ccs, self.input_op, 
             *[subarg for arg in zip(uus[::-1], self.u_ops) for subarg in arg], 
             self.output_op)
