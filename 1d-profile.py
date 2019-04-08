@@ -16,6 +16,7 @@ NDspline_dict = {"natural": NDBPoly.pinned, "clamped": NDBPoly.clamped, None: 0}
 
 test_Bspline = interpolate.make_interp_spline(x, fvals)
 test_NDBspline = NDBPoly.make_interp_spline(x, fvals,)
+test_NDBspline.check_workspace_shapes(xx)
 extrap_flag = True
 
 @profile
