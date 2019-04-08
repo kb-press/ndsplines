@@ -12,25 +12,40 @@ factor = 1.25
 xx = np.r_[-1:1:1024j]*factor*np.pi
 
 
-NDspline_dict = {"natural": NDBPoly.pinned, "clamped": NDBPoly.clamped, None: 0}
+def create_run_scipy():
+    internal_Bspline = interpolate.make_interp_spline(x, fvals)
+    return internal_Bspline(xx.copy())
 
+def create_run_ndspline():
+    internal_NDBspline = NDBPoly.make_interp_spline(x, fvals,)    
+    return internal_NDBspline(xx.copy())
 
-test_Bspline = interpolate.make_interp_spline(x, fvals)
-test_NDBspline = NDBPoly.make_interp_spline(x, fvals,)
-# test_NDBspline.check_workspace_shapes(xx.shape)
-extrap_flag = True
+def create_run_test():
+    internal_Bspline = interpolate.make_interp_spline(x, fvals)
+    internal_NDBspline = NDBPoly.make_interp_spline(x, fvals,)    
+    
+    internal_Bspline(xx.copy())
+    internal_NDBspline(xx.copy())
+    
+external_Bspline = interpolate.make_interp_spline(x, fvals)
+external_NDBspline = NDBPoly.make_interp_spline(x, fvals,)    
 
+def run_scipy():
+    return external_Bspline(xx.copy())
 
-def speed_test():
-    splinef = test_Bspline(xx.copy(), extrapolate=extrap_flag)
-    NDsplinef = test_NDBspline(xx.copy())
+def run_ndspline():
+    return external_NDBspline(xx.copy())
+
+def run_test():
+    external_Bspline(xx.copy())
+    external_NDBspline(xx.copy())
+
 
 
 lp = LineProfiler()
-# lp.add_function(test_NDBspline.get_us_and_cc_sel)
-lp_wrapper = lp(speed_test)
+# lp.add_function(NDBPoly.NDBPoly.get_us_and_cc_sel)
+
+lp_wrapper = lp(run_test)
 lp_wrapper()
 lp.print_stats()
 
-    
-speed_test()
