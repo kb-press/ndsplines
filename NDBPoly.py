@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import interpolate
+import scipy_bspl
 
 try:
     profile
@@ -169,54 +170,6 @@ def eval_bases(t, k, x, ell, nu=0, workspace=None):
 
     if do_return:
         return u
-
-
-def process_bases_call(t, k, x, nu=0, periodic=False, extrapolate=True):
-    """
-
-    Similar to scipy\\interpolate\\_bsplines.py BSpline.__call__
-
-    which goes through BSpline._evaluate and onto
-    scipy\\interpolate\\_bspl.pyx evaluate_spline
-
-    more or less equivalent to splev
-
-    Parameters
-    ----------
-    t : ndarray, shape=(n+k+1,) dtype=np.float_
-        knots
-    x : ndarray, shape=(s,) dtype=np.float_
-        values to find the interval for
-    k : int
-        order of B-spline
-    periodic : bool
-        whether to wrap the x values to evaluate a periodic spline
-    extrapolate : bool
-        whether to return the last or the first interval if xval
-        is out of bounds.
-
-    Returns
-    -------
-    u : ndarray, shape=(k+1,s,) dtype=np.float_
-        value of
-
-    """
-    x_shape, x_ndim = x.shape, x.ndim
-    x = np.ascontiguousarray(x.ravel(), dtype=np.float_)
-
-    if periodic:
-        n = t.size - k - 1
-        x = t[k] + (x - t[k]) % (t[n] - t[k])
-        ell = find_intervals(t, k, x, False)
-    else:
-        ell = find_intervals(t, k, x, extrapolate)
-
-    u = eval_bases(t, k, x, ell, nu)
-    u.reshape((k+1,)+x_shape)
-
-    return u
-
-
     
 
 class NDBPoly(object):
@@ -258,16 +211,20 @@ class NDBPoly(object):
         self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
         self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
         for i in range(self.ndim):
-            self.u_ops.append([i+1, ...])
+            self.u_ops.append([..., i+1,])
             knot_sel = ((i,) + (0,)*i + (slice(None,None),) + 
                 (0,)*(self.ndim-i-1))
-            self.knots_vec.append(self.knots[knot_sel])
+
+            #TODO: this is the only thing we need to keep in the constructor.
+            self.knots_vec.append(
+                np.ascontiguousarray(self.knots[knot_sel], dtype=np.float_)
+            )
 
             self.ell_work.append(
-                np.empty((self.knots_vec[-1].shape[0],self.cur_max_x_size),dtype=np.int_))
+                np.empty((self.cur_max_x_size,),dtype=np.int_))
 
             self.eval_work.append(
-                np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_))
+                np.empty((self.cur_max_x_size,2*self.orders[i]+3),dtype=np.float_))
 
     @profile
     def get_us_and_cc_sel(self, x, nus=0):
@@ -286,20 +243,25 @@ class NDBPoly(object):
             if self.periodic[i]:
                 n = t.size - k - 1
                 x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
-                find_intervals(t, k, x[i,:], False, self.ell_work[i])
+                extrapolate_flag = False
+                # find_intervals(t, k, x[i,:], False, self.ell_work[i])
             else:
                 if not self.extrapolate[i,0]:
                     lt_sel = x[i,:] < t[k]
                     x[i,lt_sel] = t[k]
                 if not self.extrapolate[i,1]:
                     gte_sel = t[-k-1] < x[i,:]
-                    x[i,gte_sel] = t[-k-1] 
-                find_intervals(t, k, x[i,:], True, self.ell_work[i])
+                    x[i,gte_sel] = t[-k-1]
+                extrapolate_flag = True
+                # find_intervals(t, k, x[i,:], True, self.ell_work[i])
 
-            ell = self.ell_work[i][0,:num_points]
+            
 
-            eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
-            self.uus[i, :k+1, :num_points] = self.eval_work[i][:k+1, :num_points]
+            scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
+            ell = self.ell_work[i][:num_points]
+
+            # eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
+            self.uus[i, :num_points, :k+1,] = self.eval_work[i][:num_points, :k+1]
             self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] + ell - k
         return self.cc_sel[..., :num_points], self.uus[..., :num_points]
 
@@ -308,12 +270,12 @@ class NDBPoly(object):
             self.cur_max_x_size = x.shape[-1]
             for i in range(self.ndim):
                 self.ell_work[i] = \
-                    np.empty((self.knots_vec[i].shape[0],self.cur_max_x_size),dtype=np.int_)
+                    np.empty((self.cur_max_x_size,),dtype=np.int_)
 
                 self.eval_work[i] = \
-                    np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_)
+                    np.empty((self.cur_max_x_size,2*self.orders[i]+3,),dtype=np.float_)
 
-            self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
+            self.uus = np.empty((self.ndim, self.cur_max_x_size, np.max(self.orders)+1,), dtype=np.float_)
             self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
 
     def __call__(self, x, nus=0):

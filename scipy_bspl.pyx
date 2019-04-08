@@ -22,7 +22,7 @@ ctypedef fused double_or_complex:
     double
     double complex
 
-
+# test
 #------------------------------------------------------------------------------
 # B-splines
 #------------------------------------------------------------------------------
@@ -90,12 +90,12 @@ cdef inline int find_interval(const double[::1] t,
 @cython.boundscheck(False)
 @cython.cdivision(True)
 def evaluate_spline(const double[::1] t,
-             double_or_complex[:, ::1] c,
              int k,
              const double[::1] xp,
              int nu,
              bint extrapolate,
-             double_or_complex[:, ::1] out):
+             int[::1] ell_work,
+             double[:, ::1] eval_work):
     """
     Evaluate a spline in the B-spline basis.
 
@@ -103,36 +103,37 @@ def evaluate_spline(const double[::1] t,
     ----------
     t : ndarray, shape (n+k+1)
         knots
-    c : ndarray, shape (n, m)
-        B-spline coefficients
+    k : int
+        spline order
     xp : ndarray, shape (s,)
         Points to evaluate the spline at.
     nu : int
         Order of derivative to evaluate.
     extrapolate : int, optional
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
-    out : ndarray, shape (s, m)
-        Computed values of the spline at each of the input points.
-        This argument is modified in-place.
+    eval_work : ndarray, shape (s,)
+        Array of identified 
+    eval_work : ndarray, shape (s, 2*k+3)
+        Computed values of the spline basis function at each of the input 
+        points. This argument is modified in-place.
 
     """
 
-    cdef int ip, jp, n, a
-    cdef int i, interval
+    cdef int ip, jp
+    cdef int interval
     cdef double xval
 
     # shape checks
-    if out.shape[0] != xp.shape[0]:
-        raise ValueError("out and xp have incompatible shapes")
-    if out.shape[1] != c.shape[1]:
-        raise ValueError("out and c have incompatible shapes")
+    if ell_work.shape[0] < xp.shape[0]:
+        raise ValueError("eval_work and xp have incompatible shapes")
+    if eval_work.shape[0] < xp.shape[0]:
+        raise ValueError("eval_work and xp have incompatible shapes")
+    if eval_work.shape[1] != 2*k+3:
+        raise ValueError("eval_work and k have incompatible shapes")
 
     # check derivative order
     if nu < 0:
         raise NotImplementedError("Cannot do derivative order %s." % nu)
-
-    n = c.shape[0]
-    cdef double[::1] work = np.empty(2*k+2, dtype=np.float_)
 
     # evaluate
     with nogil:
@@ -145,16 +146,12 @@ def evaluate_spline(const double[::1] t,
 
             if interval < 0:
                 # xval was nan etc
-                for jp in range(c.shape[1]):
-                    out[ip, jp] = nan
+                for jp in range(k+1):
+                    eval_work[ip, jp] = nan
                 continue
 
             # Evaluate (k+1) b-splines which are non-zero on the interval.
             # on return, first k+1 elemets of work are B_{m-k},..., B_{m}
-            _deBoor_D(&t[0], xval, k, interval, nu, &work[0])
+            _deBoor_D(&t[0], xval, k, interval, nu, &eval_work[ip, 0])
+            ell_work[ip] = interval
 
-            # Form linear combinations
-            for jp in range(c.shape[1]):
-                out[ip, jp] = 0.
-                for a in range(k+1):
-                    out[ip, jp] = out[ip, jp] + c[interval + a - k, jp] * work[a]

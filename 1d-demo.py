@@ -40,10 +40,6 @@ plt.figure()
 # plt.plot(xx, ndimage_out[0,...])
 plot_sel = [0,-1]
 
-for test_bc in test_bcs[plot_sel,:]:
-    test_NDBspline = NDBPoly.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
-    NDsplienf = test_NDBspline(xx.copy())
-    plt.plot(xx, NDsplienf.squeeze(), )
 
 plt.gca().set_prop_cycle(None)
 
@@ -51,8 +47,15 @@ for test_bc in test_bcs[plot_sel,:]:
     test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc))
     
     splinef = test_Bspline(xx.copy(), extrapolate=np.all(np.r_[NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]] > 0))
-    plt.plot(xx[::skip_size], splinef[::skip_size],'--', lw=2.0, label=str(test_bc))
-    
+    plt.plot(xx[::skip_size], splinef[::skip_size],'--', lw=3.0, label=str(test_bc))
+
+plt.gca().set_prop_cycle(None)
+
+for test_bc in test_bcs[plot_sel,:]:
+    test_NDBspline = NDBPoly.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
+    NDsplienf = test_NDBspline(xx.copy())
+    plt.plot(xx, NDsplienf.squeeze(), )
+
 plt.legend()
 plt.plot(x, fvals, 'o')
 plt.show()

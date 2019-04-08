@@ -90,3 +90,33 @@ strictly faster, but the Pure Python/NumPy implementation should approach that
 speed as dimension, dataset size, and evaluation points increase.
 
 
+Profiling
+---------
+
+built into ipython:
+
+From IPython shell
+In [ ]: %run -p 2d-profile.py
+
+There's also a python built-in that I don't know how to read the binary output of:
+
+python -m cProfile -o 2d.prof 2d-profile.py
+
+Shockingly, the first hit on google is just a 3rd party package for reading it 
+because there isn't/wasn't a good way to read them. Okay. Using line_profiler
+package:
+
+$ pip install line_profiler
+$ kernprof -l -v 1d-profile.py
+
+
+Building
+--------
+After profiling revealed that the scipy.interpolate._bspl implementation is 10x
+faster, I copied that code over to refactor to make the necessary parts accessible.
+There may be other ways to build, but from the directory
+
+$ python setup.py build_ext -i
+
+definitely builds it and makes it importable, but I'm not sure if it's the only/best
+way.
