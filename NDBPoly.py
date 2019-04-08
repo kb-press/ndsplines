@@ -5,8 +5,6 @@ import scipy_bspl
 """
 TODOs:
 
-implement periodic call
-
 implement a least-squares constructor
 
 """
