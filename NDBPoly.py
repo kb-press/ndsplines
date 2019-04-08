@@ -1,6 +1,11 @@
 import numpy as np
 from scipy import interpolate
 
+try:
+    profile
+except NameError:
+    profile = lambda x: x
+
 """
 TODOs:
 
@@ -16,6 +21,7 @@ periodic = -1
 
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
+@profile
 def find_intervals(t, k, x, extrapolate=False, workspace=None):
     """
     Find an interval ell such that t[ell] <= x < t[ell+1].
@@ -75,6 +81,7 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
     if do_return:
         return ell
 
+@profile
 def eval_bases(t, k, x, ell, nu=0, workspace=None):
     """
     Evaluate the k+1 non-zero spline basis functions for x
@@ -262,6 +269,7 @@ class NDBPoly(object):
             self.eval_work.append(
                 np.empty((2*self.orders[i]+3,self.cur_max_x_size),dtype=np.float_))
 
+    @profile
     def get_us_and_cc_sel(self, x, nus=0):
         """
         Parameters
@@ -323,8 +331,8 @@ class NDBPoly(object):
 
         self.check_workspace_shapes(x)
         cc_sel, uus = self.get_us_and_cc_sel(x, nus)        
-            
-        ccs = self.coeffs[(slice(None),) + tuple(cc_sel)]
+        cc_sel = (slice(None),) + tuple(cc_sel)
+        ccs = self.coeffs[cc_sel]
         # TODO: why do the uus and u_ops go in the opposite order from what I 
         # expect? 
 
