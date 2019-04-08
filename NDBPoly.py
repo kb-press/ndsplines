@@ -122,6 +122,8 @@ class NDBPoly(object):
         nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.int_
             
         """
+        if not isinstance(x, np.ndarray):
+            x = np.array(x)
         x_shape, x_ndim = x.shape, x.ndim
         x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
         nus = np.broadcast_to(nus, (self.ndim,))

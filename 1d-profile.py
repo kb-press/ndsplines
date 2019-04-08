@@ -2,6 +2,7 @@ from scipy import interpolate
 import numpy as np
 import NDBPoly
 from line_profiler import LineProfiler
+import timeit
 
 x = np.r_[-1:1:9j] * np.pi
 x = np.r_[-1:-0.5:3j, 0, 0.5:1:3j] *np.pi
@@ -31,20 +32,28 @@ external_Bspline = interpolate.make_interp_spline(x, fvals)
 external_NDBspline = NDBPoly.make_interp_spline(x, fvals,)    
 
 def run_scipy():
-    return external_Bspline(xx.copy())
+    return external_Bspline(xx)
 
 def run_ndspline():
-    return external_NDBspline(xx.copy())
+    return external_NDBspline(xx)
+    
+def run1_scipy():
+    return external_Bspline(0.0)
+
+def run1_ndspline():
+    return external_NDBspline(0.0)
 
 def run_test():
     external_Bspline(xx.copy())
     external_NDBspline(xx.copy())
 
-
+run_ndspline()
+print("   scipy: ", timeit.timeit(run1_scipy, number=10))
+print("ndspline: ", timeit.timeit(run1_ndspline, number=10))
 
 lp = LineProfiler()
-# lp.add_function(NDBPoly.NDBPoly.get_us_and_cc_sel)
-
+lp.add_function(NDBPoly.NDBPoly.get_us_and_cc_sel)
+lp.add_function(NDBPoly.NDBPoly.__call__)
 lp_wrapper = lp(run_test)
 lp_wrapper()
 lp.print_stats()
