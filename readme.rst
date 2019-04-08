@@ -107,8 +107,10 @@ because there isn't/wasn't a good way to read them. Okay. Using line_profiler
 package:
 
 $ pip install line_profiler
-$ kernprof -l -v 1d-profile.py
+$ python 1d-profile.py
 
+
+I made the profiling explicit and decoupled from actual source code.
 
 Building
 --------
