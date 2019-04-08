@@ -2,11 +2,6 @@ import numpy as np
 from scipy import interpolate
 import scipy_bspl
 
-try:
-    profile
-except NameError:
-    profile = lambda x: x
-
 """
 TODOs:
 
@@ -77,7 +72,8 @@ class NDBPoly(object):
             self.eval_work.append(
                 np.empty((self.cur_max_x_size,2*self.orders[i]+3),dtype=np.float_))
 
-    @profile
+        self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
+
     def get_us_and_cc_sel(self, x, nus=0):
         """
         Parameters
@@ -107,16 +103,14 @@ class NDBPoly(object):
             
 
             scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
-            ell = self.ell_work[i][:num_points]
+            ell_minus_k = self.ell_work[i][:num_points]
 
-            # eval_bases(t, k, x[i,:], ell, nu, self.eval_work[i])
-            self.uus[i, :num_points, :k+1,] = self.eval_work[i][:num_points, :k+1]
-            self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] + ell - k
-        return self.cc_sel[..., :num_points], self.uus[..., :num_points]
+            self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+            self.cc_sel[i, ..., :num_points] += ell_minus_k
 
-    def check_workspace_shapes(self, x):
-        if self.cur_max_x_size < x.shape[-1]:
-            self.cur_max_x_size = x.shape[-1]
+    def check_workspace_shapes(self, x_shape):
+        if self.cur_max_x_size < x_shape[-1]:
+            self.cur_max_x_size = x_shape[-1]
             for i in range(self.ndim):
                 self.ell_work[i] = \
                     np.empty((self.cur_max_x_size,),dtype=np.int_)
@@ -127,7 +121,6 @@ class NDBPoly(object):
             self.uus = np.empty((self.ndim, self.cur_max_x_size, np.max(self.orders)+1,), dtype=np.float_)
             self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
 
-    @profile
     def __call__(self, x, nus=0):
         """
         Parameters
@@ -139,19 +132,21 @@ class NDBPoly(object):
         x_shape, x_ndim = x.shape, x.ndim
         x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
         nus = np.broadcast_to(nus, (self.ndim,))
+        num_points = x.shape[-1]
 
 
-        self.check_workspace_shapes(x)
-        cc_sel, uus = self.get_us_and_cc_sel(x, nus)        
-        cc_sel = (slice(None),) + tuple(cc_sel)
+        self.check_workspace_shapes(x.shape)
+        self.get_us_and_cc_sel(x, nus)        
+        cc_sel = (slice(None),) + tuple(self.cc_sel[..., :num_points])
         ccs = self.coeffs[cc_sel]
-        # TODO: why do the uus and u_ops go in the opposite order from what I 
-        # expect? 
+
+        for i in range(self.ndim):
+            self.u_arg[2*i] = self.eval_work[i][:num_points, :self.orders[i]+1]
 
         # TODO: optimize einsum path, store it in case the shapes are the same
         # and/or write a memoization wrapper for the path optimizer
         y_out = np.einsum(ccs, self.input_op, 
-            *[subarg for arg in zip(uus, self.u_ops) for subarg in arg], 
+            *self.u_arg, 
             self.output_op)
         y_out = y_out.reshape(
                     (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)

@@ -153,5 +153,5 @@ def evaluate_spline(const double[::1] t,
             # Evaluate (k+1) b-splines which are non-zero on the interval.
             # on return, first k+1 elemets of work are B_{m-k},..., B_{m}
             _deBoor_D(&t[0], xval, k, interval, nu, &eval_work[ip, 0])
-            ell_work[ip] = interval
+            ell_work[ip] = interval - k
 
