@@ -23,7 +23,8 @@ class NDBPoly(object):
         """
         Parameters
         ----------
-        knots : ndarray, shape=(ndim, n_1+orders[i-1], ..., n_ndim+orders[-1]), dtype=np.float_
+        knots : list of ndarrays, 
+            shapes=[n_1+orders[i-1], ..., n_ndim+orders[-1]], dtype=np.float_
         coeffs : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
         orders : ndarray, shape=(ndim,), dtype=np.int_
         periodic : ndarray, shape=(ndim,), dtype=np.bool_
@@ -37,7 +38,7 @@ class NDBPoly(object):
         """
         self.knots = knots
         self.coeffs = coeffs
-        self.ndim = knots.shape[0] # dimension of knots
+        self.ndim = len(knots) # dimension of knots
         self.mdim = coeffs.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
@@ -46,7 +47,6 @@ class NDBPoly(object):
         self.u_ops = []
         self.input_op = list(i for i in range(self.ndim+1)) + [...,]
         self.output_op = [0,...]
-        self.knots_vec = []
         self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
         self.eval_work = []
         self.ell_work = []
@@ -60,11 +60,6 @@ class NDBPoly(object):
             self.u_ops.append([..., i+1,])
             knot_sel = ((i,) + (0,)*i + (slice(None,None),) + 
                 (0,)*(self.ndim-i-1))
-
-            #TODO: this is the only thing we need to keep in the constructor.
-            self.knots_vec.append(
-                np.ascontiguousarray(self.knots[knot_sel], dtype=np.float_)
-            )
 
             self.ell_work.append(
                 np.empty((self.cur_max_x_size,),dtype=np.int_))
@@ -84,7 +79,7 @@ class NDBPoly(object):
         num_points = x.shape[-1]
 
         for i in range(self.ndim):
-            t = self.knots_vec[i]
+            t = self.knots[i]
             k = self.orders[i]
             nu = nus[i]
             if self.periodic[i]:
@@ -182,11 +177,9 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     # and y.sahpe = (mdim, n1, n2, ..., n_ndim)
     bcs = np.broadcast_to(bcs, (ndim,2))
     orders = np.broadcast_to(orders, (ndim,))
-    knot_shape = np.r_[x.shape]
     deriv_specs = np.asarray((bcs[:,:]>0),dtype=np.int)
-    knot_shape[1:] = knot_shape[1:] + orders + 1 + deriv_specs.sum(axis=1)
 
-    knots = np.zeros(knot_shape)
+    knots = []
     coeffs = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
 
     for i in np.arange(ndim)+1:
@@ -212,8 +205,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
             )
             coeffs[coeff_line_sel] = line_spline.c.T
-        knots[i-1,...] = (line_spline.t[(None,)*(i-1) + 
-            (slice(None),) + (None,)*(ndim-i)])
+        knots.append(line_spline.t)
     return NDBPoly(knots, coeffs, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs %2)==0)
