@@ -52,7 +52,6 @@ class NDBPoly(object):
         self.cur_max_x_size = 0
         self.check_workspace_shapes((self.ndim, 1))
 
-        self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
 
     def get_us_and_cc_sel(self, x, nus=0):
         """
@@ -97,6 +96,14 @@ class NDBPoly(object):
             self.eval_work = np.empty((self.ndim, self.cur_max_x_size, 2*np.max(self.orders)+3), dtype=np.float_)
             self.ell_work = np.empty((self.ndim, self.cur_max_x_size, ), dtype=np.int_)
             self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
+            self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
+            for i in range(self.ndim):
+                self.u_arg[2*i] = self.eval_work[i][:self.cur_max_x_size, :self.orders[i]+1]
+
+            cc_sel = (slice(None),) + tuple(self.cc_sel[..., :self.cur_max_x_size])
+            self.einsum_path = np.einsum_path(self.coeffs[cc_sel], self.input_op, 
+                *self.u_arg, 
+                self.output_op, optimize='optimal')[0]
 
     def __call__(self, x, nus=0):
         """
@@ -119,16 +126,16 @@ class NDBPoly(object):
         self.check_workspace_shapes(x.shape)
         self.get_us_and_cc_sel(x, nus)        
         cc_sel = (slice(None),) + tuple(self.cc_sel[..., :num_points])
-        ccs = self.coeffs[cc_sel]
 
         for i in range(self.ndim):
             self.u_arg[2*i] = self.eval_work[i][:num_points, :self.orders[i]+1]
 
         # TODO: optimize einsum path, store it in case the shapes are the same
         # and/or write a memoization wrapper for the path optimizer
-        y_out = np.einsum(ccs, self.input_op, 
+        y_out = np.einsum(self.coeffs[cc_sel], self.input_op, 
             *self.u_arg, 
-            self.output_op)
+            self.output_op,
+            optimize = self.einsum_path)
         y_out = y_out.reshape(
                     (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
         return y_out
