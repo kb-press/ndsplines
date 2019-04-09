@@ -112,6 +112,12 @@ $ python 1d-profile.py
 
 I made the profiling explicit and decoupled from actual source code.
 
+Currently I'm just over 2x slower for 1D case callling single points, and usually
+better than 1.5x slower for 1D case for a vectorized call. This isn't too bad
+given the added funcitonality! I do see that the get_us_and_cc_sel method is
+spending ~7% of the time on iterator, so the whole function is a good candidate
+for cythonization. 
+
 Building
 --------
 After profiling revealed that the scipy.interpolate._bspl implementation is 10x
@@ -122,3 +128,5 @@ $ python setup.py build_ext -i
 
 definitely builds it and makes it importable, but I'm not sure if it's the only/best
 way.
+
+
