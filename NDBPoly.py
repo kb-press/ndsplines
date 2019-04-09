@@ -59,14 +59,18 @@ class NDBPoly(object):
         Parameters
         ----------
         x : ndarray, shape=(self.ndim, s) dtype=np.float_
-        nus : ndarray, shape=(self.ndim,) dtype=np.int_
+        nus : int or ndarray, shape=(self.ndim,) dtype=np.int_
         """
         num_points = x.shape[-1]
+
+        if not isinstance(nus, np.ndarray):
+            nu = nus
 
         for i in range(self.ndim):
             t = self.knots[i]
             k = self.orders[i]
-            nu = nus[i]
+            if isinstance(nus, np.ndarray):
+                nu = nus[i]
             if self.periodic[i]:
                 n = t.size - k - 1
                 x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
@@ -79,6 +83,7 @@ class NDBPoly(object):
                     gte_sel = t[-k-1] < x[i,:]
                     x[i,gte_sel] = t[-k-1]
                 extrapolate_flag = True
+
 
             scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
             ell_minus_k = self.ell_work[i][:num_points]
@@ -105,9 +110,11 @@ class NDBPoly(object):
             x = np.array(x)
         x_shape, x_ndim = x.shape, x.ndim
         x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
-        nus = np.broadcast_to(nus, (self.ndim,))
         num_points = x.shape[-1]
 
+        if isinstance(nus, np.ndarray):
+            if nus.shape != 1 and nus.shape != self.ndim:
+                raise ValueError("nus is wrong shape")
 
         self.check_workspace_shapes(x.shape)
         self.get_us_and_cc_sel(x, nus)        
