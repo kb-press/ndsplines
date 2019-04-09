@@ -48,8 +48,10 @@ def run_test():
     external_NDBspline(xx.copy())
 
 run_ndspline()
-print("   scipy: ", timeit.timeit(run1_scipy, number=10))
-print("ndspline: ", timeit.timeit(run1_ndspline, number=10))
+
+print("timing external run1")
+print("   scipy: ", timeit.timeit(run1_scipy, number=100))
+print("ndspline: ", timeit.timeit(run1_ndspline, number=100))
 
 lp = LineProfiler()
 lp.add_function(NDBPoly.NDBPoly.get_us_and_cc_sel)

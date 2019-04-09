@@ -42,28 +42,15 @@ class NDBPoly(object):
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
 
-        self.u_ops = []
         self.input_op = list(i for i in range(self.ndim+1)) + [...,]
+        self.u_ops = [[..., i+1] for i in range(self.ndim)]
         self.output_op = [0,...]
-        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
-        self.eval_work = []
-        self.ell_work = []
-        self.cur_max_x_size = 1
 
+        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
         self.c_shape_base = (self.ndim,)+tuple(self.orders+1)
 
-        self.uus = np.empty((self.ndim,np.max(self.orders)+1,self.cur_max_x_size,), dtype=np.float_)
-        self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
-        for i in range(self.ndim):
-            self.u_ops.append([..., i+1,])
-            knot_sel = ((i,) + (0,)*i + (slice(None,None),) + 
-                (0,)*(self.ndim-i-1))
-
-            self.ell_work.append(
-                np.empty((self.cur_max_x_size,),dtype=np.int_))
-
-            self.eval_work.append(
-                np.empty((self.cur_max_x_size,2*self.orders[i]+3),dtype=np.float_))
+        self.cur_max_x_size = 0
+        self.check_workspace_shapes((self.ndim, 1))
 
         self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
 
@@ -93,8 +80,6 @@ class NDBPoly(object):
                     x[i,gte_sel] = t[-k-1]
                 extrapolate_flag = True
 
-            
-
             scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
             ell_minus_k = self.ell_work[i][:num_points]
 
@@ -104,14 +89,8 @@ class NDBPoly(object):
     def check_workspace_shapes(self, x_shape):
         if self.cur_max_x_size < x_shape[-1]:
             self.cur_max_x_size = x_shape[-1]
-            for i in range(self.ndim):
-                self.ell_work[i] = \
-                    np.empty((self.cur_max_x_size,),dtype=np.int_)
-
-                self.eval_work[i] = \
-                    np.empty((self.cur_max_x_size,2*self.orders[i]+3,),dtype=np.float_)
-
-            self.uus = np.empty((self.ndim, self.cur_max_x_size, np.max(self.orders)+1,), dtype=np.float_)
+            self.eval_work = np.empty((self.ndim, self.cur_max_x_size, 2*np.max(self.orders)+3), dtype=np.float_)
+            self.ell_work = np.empty((self.ndim, self.cur_max_x_size, ), dtype=np.int_)
             self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
 
     def __call__(self, x, nus=0):
