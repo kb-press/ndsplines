@@ -88,8 +88,12 @@ class NDBPoly(object):
             scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
             ell_minus_k = self.ell_work[i][:num_points]
 
-            self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+            self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None]
+            np.einsum(self.cc_sel_base[i][..., None], [...,1], [...,1], out=self.cc_sel[i, ..., :num_points])
+            
             self.cc_sel[i, ..., :num_points] += ell_minus_k
+            np.einsum(self.cc_sel[i, ..., :num_points], [...,1], ell_minus_k, [1], [...,1], out=self.cc_sel[i, ..., :num_points])
+
 
     def check_workspace_shapes(self, x_shape):
         if self.cur_max_x_size < x_shape[-1]:
