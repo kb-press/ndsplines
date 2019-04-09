@@ -1,0 +1,121 @@
+self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None]
+np.einsum(self.cc_sel[i, ..., :num_points], [...,1], ell_minus_k, [1], [...,1], out=self.cc_sel[i, ..., :num_points])
+
+timing external run1
+   scipy:  16.829257959033207
+ndspline:  37.870461550539474
+timing external run big
+   scipy:  9.575902228563436
+ndspline:  13.842702640893748
+
+timing external run1
+   scipy:  16.22239042356017
+ndspline:  37.27940242824326
+timing external run big
+   scipy:  10.86865077875133
+ndspline:  14.161417248923954
+
+
+self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None]
+self.cc_sel[i, ..., :num_points] += ell_minus_k
+
+timing external run1
+   scipy:  16.743458352248872
+ndspline:  37.66223303489448
+timing external run big
+   scipy:  9.49718314907038
+ndspline:  14.12038517727131
+
+timing external run1
+   scipy:  16.99689258931832
+ndspline:  38.15943197061805
+timing external run big
+   scipy:  9.975568660848076
+ndspline:  14.000741546033879
+
+
+looks like no diference, at least not much
+
+
+self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] + ell_minus_k
+
+   scipy:  20.623967040881457
+ndspline:  39.237703903826
+timing external run big
+   scipy:  11.66000925012544
+ndspline:  17.07820323993323
+
+
+timing external run1
+   scipy:  25.015094173786302
+ndspline:  56.143209264461426
+timing external run big
+   scipy:  13.489681928804757
+ndspline:  17.22855660496502
+
+
+not sure why scipy is taking so long this morning??
+
+
+np.einsum(self.cc_sel_base[i][..., None], [...,1], [...,1], ell_minus_k, [1], out=self.cc_sel[i, ..., :num_points])
+
+
+
+[----------------]
+
+self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+self.cc_sel[i, ..., :num_points] += ell_minus_k
+
+timing external run1
+   scipy:  18.2825699988736
+ndspline:  38.65652210643447
+timing external run big
+   scipy:  9.836199819776148
+ndspline:  14.222615703367936
+
+timing external run1
+   scipy:  17.093023067286982
+ndspline:  38.051204222972395
+timing external run big
+   scipy:  10.228999484587113
+ndspline:  14.08183331683557
+
+self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+self.cc_sel[i, ..., :num_points] += self.ell_work[i][:num_points]
+
+
+timing external run1
+   scipy:  16.798642945158022
+ndspline:  37.05879418982896
+timing external run big
+   scipy:  9.372862828490383
+ndspline:  14.104107857827955
+
+
+np.add(
+    self.cc_sel_base[i][..., None],
+    self.ell_work[i][:num_points], 
+    out=self.cc_sel[i, ..., :num_points])
+
+
+timing external run1
+   scipy:  16.757387727029137
+ndspline:  35.80309435469282
+timing external run big
+   scipy:  9.797514412787706
+ndspline:  14.703763026122218
+
+timing external run1
+   scipy:  16.38499935146722
+ndspline:  35.1853395751769
+timing external run big
+   scipy:  10.04582481422949
+ndspline:  13.366201287508233
+
+timing external run1
+   scipy:  15.963991497393922
+ndspline:  34.741568647194754
+timing external run big
+   scipy:  9.353949564629708
+ndspline:  13.32933561230027
+

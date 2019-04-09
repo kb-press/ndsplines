@@ -44,19 +44,23 @@ def run1_ndspline():
     return external_NDBspline(0.0)
 
 def run_test():
-    external_Bspline(xx.copy())
-    external_NDBspline(xx.copy())
+    external_Bspline(0.0) #xx.copy())
+    external_NDBspline(0.0) #xx.copy())
 
 run_ndspline()
 
 print("timing external run1")
-print("   scipy: ", timeit.timeit(run1_scipy, number=100))
-print("ndspline: ", timeit.timeit(run1_ndspline, number=100))
+print("   scipy: ", timeit.timeit(run1_scipy, number=1_000_000))
+print("ndspline: ", timeit.timeit(run1_ndspline, number=1_000_000))
+
+print("timing external run big")
+print("   scipy: ", timeit.timeit(run_scipy, number=100_000))
+print("ndspline: ", timeit.timeit(run_ndspline, number=100_000))
 
 lp = LineProfiler()
 lp.add_function(NDBPoly.NDBPoly.get_us_and_cc_sel)
 lp.add_function(NDBPoly.NDBPoly.__call__)
 lp_wrapper = lp(run_test)
-lp_wrapper()
-lp.print_stats()
+# lp_wrapper()
+# lp.print_stats()
 
