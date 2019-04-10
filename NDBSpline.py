@@ -48,9 +48,9 @@ class NDBSpline(object):
         self.coefficient_shape_base = (self.ndim,)+tuple(self.orders+1)
 
         self.current_max_num_points = 0
-        self.check_workspace_shapes((self.ndim, 1))
+        self.allocate_workspace_arrays(1)
 
-        self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
+        self.u_arg = [subarg for arg in zip(self.basis_workspace, self.u_ops) for subarg in arg]
 
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
@@ -83,25 +83,31 @@ class NDBSpline(object):
                 extrapolate_flag = True
 
 
-            scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
+            scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
-                self.ell_work[i][:num_points], 
-                out=self.cc_sel[i, ..., :num_points])
+                self.interval_workspace[i][:num_points], 
+                out=self.coefficient_selector[i, ..., :num_points])
 
-    def check_workspace_shapes(self, x_shape):
-        if self.current_max_num_points < x_shape[-1]:
-            self.current_max_num_points = x_shape[-1]
-            self.eval_work = np.empty((self.ndim, self.current_max_num_points, 2*np.max(self.orders)+3), dtype=np.float_)
-            self.ell_work = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.int_)
-            self.cc_sel = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
+    def allocate_workspace_arrays(self, num_points):
+        if self.current_max_num_points < num_points:
+            self.current_max_num_points = num_points
+            self.basis_workspace = np.empty((
+                self.ndim, 
+                self.current_max_num_points,
+                2*np.max(self.orders)+3
+            ), dtype=np.float_)
+            self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.int_)
+            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
 
     def __call__(self, x, nus=0):
         """
         Parameters
         ----------
         x : ndarray, shape=(self.ndim,...) dtype=np.float_
+            Point(s) to evaluate spline on. Output will be (self.mdim,...)
         nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.int_
+            Order of derivative(s) for each dimension to evaluate
             
         """
         if not isinstance(x, np.ndarray):
@@ -114,17 +120,14 @@ class NDBSpline(object):
             if nus.shape != 1 and nus.shape != self.ndim:
                 raise ValueError("nus is wrong shape")
 
-        self.check_workspace_shapes(x.shape)
+        self.allocate_workspace_arrays(x.shape[-1])
         self.compute_basis_coefficient_selector(x, nus)        
-        cc_sel = (slice(None),) + tuple(self.cc_sel[..., :num_points])
-        ccs = self.coefficients[cc_sel]
+        coefficient_selector = (slice(None),) + tuple(self.coefficient_selector[..., :num_points])
 
         for i in range(self.ndim):
-            self.u_arg[2*i] = self.eval_work[i][:num_points, :self.orders[i]+1]
+            self.u_arg[2*i] = self.basis_workspace[i][:num_points, :self.orders[i]+1]
 
-        # TODO: optimize einsum path, store it in case the shapes are the same
-        # and/or write a memoization wrapper for the path optimizer
-        y_out = np.einsum(ccs, self.input_op, 
+        y_out = np.einsum(self.coefficients[coefficient_selector], self.input_op, 
             *self.u_arg, 
             self.output_op)
         y_out = y_out.reshape(
@@ -135,6 +138,26 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     pass
 
 def make_interp_spline(x, y, bcs=0, orders=3):
+    """
+    Construct an interpolating B-spline.
+
+    Parameters
+    ----------
+    x : array_like, shape (n,) or 
+        Abscissas.
+    y : array_like, shape (n, ...)
+        Ordinates.
+    bcs : (list of) 2-tuples or None
+    orders : int, optional
+        B-spline degree. Default is cubic, k=3.
+
+
+    Notes
+    -----
+    TODO: use scipy source to implement this more efficiently?
+    i.e., do knot computation once for each dimension, then coefficients for
+    each line 
+    """
     if isinstance(x, np.ndarray): # mesh
         if x.ndim == 1:
             ndim = 1

@@ -31,7 +31,7 @@ newxymesh = np.r_['0,3', newmeshx, newmeshy]
 indices = testpoly.indices_from_coords(newxymesh)
 print(indices)
 new_coords, aliasing_mask = testpoly.transform_coord_to_pixel(newxymesh)
-newf = ndimage.map_coordinates(testpoly.coeffs[0], new_coords, prefilter=False, mode='nearest')
+newf = ndimage.map_coordinates(testpoly.coefficients[0], new_coords, prefilter=False, mode='nearest')
 
 
 plt.figure()
@@ -78,15 +78,15 @@ jvals = (newmeshy - y0)/dy
 coords = array([ivals, jvals])
 # newf = ndimage.map_coordinates(fvals, coords)
 
-coeffs = ndimage.spline_filter(fvals, order=3)
+coefficients = ndimage.spline_filter(fvals, order=3)
 
 # spline_filter is just spline_filter1d on each axis, order doesn't matter
-ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coeffs
-ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coeffs
+ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coefficients
+ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coefficients
 
-# interpolate.NdPPoly(coeffs, (meshx.reshape(-1), meshy.reshape(-1)))
+# interpolate.NdPPoly(coefficients, (meshx.reshape(-1), meshy.reshape(-1)))
 
-newf = ndimage.map_coordinates(testpoly.coeffs, testpoly.transform_coord_to_pixel(np.r_['0,3', newmeshx, newmeshy]), prefilter=False)
+newf = ndimage.map_coordinates(testpoly.coefficients, testpoly.transform_coord_to_pixel(np.r_['0,3', newmeshx, newmeshy]), prefilter=False)
 
 ##
 plt.figure();
@@ -103,10 +103,10 @@ plt.show()
 
 # 
 
-# coeffs = ndimage.spline_filter(fvals, order=3)
-# ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coeffs
-# ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coeffs
-# ndimage.map_coordinates(coeffs, oldxy, prefilter=False) - fvals
+# coefficients = ndimage.spline_filter(fvals, order=3)
+# ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coefficients
+# ndimage.spline_filter1d(ndimage.spline_filter1d(fvals, order=3, axis=0), order=3, axis=1) - coefficients
+# ndimage.map_coordinates(coefficients, oldxy, prefilter=False) - fvals
 
 
 xderiv = (x[:-1] + x[1:])/2
@@ -122,7 +122,7 @@ newf_x = ndimage.map_coordinates(coeffs_dx, np.r_['0,3', np.meshgrid(x[1:],yderi
 
 
 dt = 2**-2
-num_deriv = (ndimage.map_coordinates(coeffs, np.r_['0,3',np.meshgrid(xderiv+dt,yderiv)], prefilter=False)-ndimage.map_coordinates(coeffs, np.r_['0,3',np.meshgrid(xderiv-dt,yderiv)], prefilter=False))/(2*dt)
+num_deriv = (ndimage.map_coordinates(coefficients, np.r_['0,3',np.meshgrid(xderiv+dt,yderiv)], prefilter=False)-ndimage.map_coordinates(coefficients, np.r_['0,3',np.meshgrid(xderiv-dt,yderiv)], prefilter=False))/(2*dt)
 
 
 

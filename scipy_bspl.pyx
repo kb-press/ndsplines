@@ -94,8 +94,8 @@ def evaluate_spline(const double[::1] t,
              const double[::1] xp,
              int nu,
              bint extrapolate,
-             int[::1] ell_work,
-             double[:, ::1] eval_work):
+             int[::1] interval_workspace,
+             double[:, ::1] basis_workspace):
     """
     Evaluate a spline in the B-spline basis.
 
@@ -111,9 +111,9 @@ def evaluate_spline(const double[::1] t,
         Order of derivative to evaluate.
     extrapolate : int, optional
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
-    eval_work : ndarray, shape (s,)
-        Array of identified 
-    eval_work : ndarray, shape (s, 2*k+3)
+    interval_workspace : ndarray, shape (s,), dtype=int
+        Array of identified intervals
+    basis_workspace : ndarray, shape (s, 2*k+3), dtype=float
         Computed values of the spline basis function at each of the input 
         points. This argument is modified in-place.
 
@@ -124,12 +124,12 @@ def evaluate_spline(const double[::1] t,
     cdef double xval
 
     # shape checks
-    if ell_work.shape[0] < xp.shape[0]:
-        raise ValueError("eval_work and xp have incompatible shapes")
-    if eval_work.shape[0] < xp.shape[0]:
-        raise ValueError("eval_work and xp have incompatible shapes")
-    if eval_work.shape[1] != 2*k+3:
-        raise ValueError("eval_work and k have incompatible shapes")
+    if interval_workspace.shape[0] < xp.shape[0]:
+        raise ValueError("basis_workspace and xp have incompatible shapes")
+    if basis_workspace.shape[0] < xp.shape[0]:
+        raise ValueError("basis_workspace and xp have incompatible shapes")
+    if basis_workspace.shape[1] != 2*k+3:
+        raise ValueError("basis_workspace and k have incompatible shapes")
 
     # check derivative order
     if nu < 0:
@@ -147,11 +147,11 @@ def evaluate_spline(const double[::1] t,
             if interval < 0:
                 # xval was nan etc
                 for jp in range(k+1):
-                    eval_work[ip, jp] = nan
+                    basis_workspace[ip, jp] = nan
                 continue
 
             # Evaluate (k+1) b-splines which are non-zero on the interval.
             # on return, first k+1 elemets of work are B_{m-k},..., B_{m}
-            _deBoor_D(&t[0], xval, k, interval, nu, &eval_work[ip, 0])
-            ell_work[ip] = interval - k
+            _deBoor_D(&t[0], xval, k, interval, nu, &basis_workspace[ip, 0])
+            interval_workspace[ip] = interval - k
 
