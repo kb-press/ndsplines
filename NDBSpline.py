@@ -10,6 +10,12 @@ implement a least-squares constructor, etc
 create wrapper with callback to allow for creating anti-derivative splines, etc
 (use 1D operations that can be iterated over )
 
+break out some of the knot normalization stuff (in interpolate.make_interp_spline)
+to make it easier to make lsq splines?
+
+make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfile?
+
+
 """
 pinned = 2
 clamped = 1
@@ -20,16 +26,16 @@ bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
 class NDBSpline(object):
-    def __init__(self, knots, coefficients, orders=3, periodic=False, extrapolate=True):
+    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         """
         Parameters
         ----------
         knots : list of ndarrays, 
-            shapes=[n_1+orders[i-1], ..., n_ndim+orders[-1]], dtype=np.float_
+            shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
         coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
         orders : ndarray, shape=(ndim,), dtype=np.int_
         periodic : ndarray, shape=(ndim,), dtype=np.bool_
-        extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
+        extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
             
         """
         self.knots = knots
@@ -89,6 +95,8 @@ class NDBSpline(object):
                 self.interval_workspace[i][:num_points], 
                 out=self.coefficient_selector[i, ..., :num_points])
 
+            self.u_arg[2*i] = self.basis_workspace[i][:num_points, :self.orders[i]+1]
+
     def allocate_workspace_arrays(self, num_points):
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
@@ -104,7 +112,7 @@ class NDBSpline(object):
         """
         Parameters
         ----------
-        x : ndarray, shape=(self.ndim,...) dtype=np.float_
+        x : ndarray, shape=(self.ndim, ...) dtype=np.float_
             Point(s) to evaluate spline on. Output will be (self.mdim,...)
         nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.int_
             Order of derivative(s) for each dimension to evaluate
@@ -124,9 +132,6 @@ class NDBSpline(object):
         self.compute_basis_coefficient_selector(x, nus)        
         coefficient_selector = (slice(None),) + tuple(self.coefficient_selector[..., :num_points])
 
-        for i in range(self.ndim):
-            self.u_arg[2*i] = self.basis_workspace[i][:num_points, :self.orders[i]+1]
-
         y_out = np.einsum(self.coefficients[coefficient_selector], self.input_op, 
             *self.u_arg, 
             self.output_op)
@@ -135,7 +140,49 @@ class NDBSpline(object):
         return y_out
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
-    pass
+    """
+    Construct an interpolating B-spline.
+
+    Parameters
+    ----------
+    x : array_like, shape (ndim, num_points)
+        Abscissas.
+    y : array_like, shape (mdim, num_points)
+        Ordinates.
+    knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_ndim, + orders[-1] + 1)
+        Knots and data points must satisfy Schoenberg-Whitney conditions.
+    orders : ndarray, shape=(ndim,), dtype=np.int_
+    w : array_like, shape (n,), optional
+        Weights for spline fitting. Must be positive. If ``None``,
+        then weights are all equal.
+        Default is ``None``.
+    """
+    ndim = x.shape[0]
+    mdim = y.shape[0]
+    num_points = x.shape[1]
+    assert x.shape[1] == y.shape[1]
+    assert x.ndim == 2
+    assert y.ndim == 2
+    # TODO: check knot shape and order
+
+    knot_shapes = tuple(knot.size for knot in knots)
+    
+    temp_spline = NDBSpline(knots, np.empty(mdim), orders)
+    temp_spline.allocate_workspace_arrays(num_points)
+    temp_spline.compute_basis_coefficient_selector(x)
+
+    observation_tensor_values = np.einsum(*temp_spline.u_arg, [...,] + temp_spline.input_op[1:-1])
+    observation_tensor = np.zeros((num_points,) + knot_shapes)
+    observation_tensor[(np.arange(num_points),) + tuple(temp_spline.coefficient_selector[..., :num_points])] = observation_tensor_values.T
+
+    observation_matrix = observation_tensor.reshape((num_points, -1))
+
+    # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w)?
+
+    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T)
+    temp_spline.coefficients = lsq_coefficients.T.reshape((mdim,) + knot_shapes )
+    return temp_spline
+
 
 def make_interp_spline(x, y, bcs=0, orders=3):
     """
@@ -143,14 +190,15 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
     Parameters
     ----------
-    x : array_like, shape (n,) or 
+    x : array_like, shape (ndim, n_1, n_2, ..., n_ndim) or arguments to np.meshgrid to construct same
         Abscissas.
-    y : array_like, shape (n, ...)
+    y : array_like, shape (mdim, n_1, n_2, ..., n_ndim)
         Ordinates.
     bcs : (list of) 2-tuples or None
-    orders : int, optional
-        B-spline degree. Default is cubic, k=3.
-
+    orders : ndarray, shape=(ndim,), dtype=np.int_
+        Degree of interpolant for each axis (or broadcastable)
+    periodic : ndarray, shape=(ndim,), dtype=np.bool_
+    extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
 
     Notes
     -----
