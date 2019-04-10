@@ -17,7 +17,7 @@ spl = NDBSpline.make_lsq_spline(x[None, :], y[None, :], [t], np.array(k))
 
 
 xs = np.linspace(-3, 3, 100)
-plt.plot(x, y, 'ro', ms=5)
-plt.plot(xs, spl(xs), 'g-', lw=3, label='LSQ spline')
+plt.plot(x, y, 'o', ms=5)
+plt.plot(xs, spl(xs), label='LSQ spline')
 plt.legend(loc='best')
 plt.show()

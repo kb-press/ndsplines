@@ -35,6 +35,7 @@ spl = NDBSpline.make_lsq_spline(input_coords.reshape((2,-1)), meshz.reshape((1,-
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
-ax.scatter(meshx, meshy, meshz)
-ax.scatter(meshx, meshy, spl(input_coords))
+
+ax.scatter(meshx, meshy, meshz, alpha=0.25)
+ax.scatter(meshx, meshy, spl(input_coords),)
 plt.show()
