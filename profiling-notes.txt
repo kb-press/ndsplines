@@ -1,4 +1,4 @@
-self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None]
+self.cc_sel[i, ..., :num_points] = self.coefficient_selector_base[i][..., None]
 np.einsum(self.cc_sel[i, ..., :num_points], [...,1], ell_minus_k, [1], [...,1], out=self.cc_sel[i, ..., :num_points])
 
 timing external run1
@@ -16,7 +16,7 @@ timing external run big
 ndspline:  14.161417248923954
 
 
-self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None]
+self.cc_sel[i, ..., :num_points] = self.coefficient_selector_base[i][..., None]
 self.cc_sel[i, ..., :num_points] += ell_minus_k
 
 timing external run1
@@ -37,7 +37,7 @@ ndspline:  14.000741546033879
 looks like no diference, at least not much
 
 
-self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] + ell_minus_k
+self.cc_sel[i, ..., :num_points] = self.coefficient_selector_base[i][..., None] + ell_minus_k
 
    scipy:  20.623967040881457
 ndspline:  39.237703903826
@@ -57,13 +57,13 @@ ndspline:  17.22855660496502
 not sure why scipy is taking so long this morning??
 
 
-np.einsum(self.cc_sel_base[i][..., None], [...,1], [...,1], ell_minus_k, [1], out=self.cc_sel[i, ..., :num_points])
+np.einsum(self.coefficient_selector_base[i][..., None], [...,1], [...,1], ell_minus_k, [1], out=self.cc_sel[i, ..., :num_points])
 
 
 
 [----------------]
 
-self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+self.cc_sel[i, ..., :num_points] = self.coefficient_selector_base[i][..., None] 
 self.cc_sel[i, ..., :num_points] += ell_minus_k
 
 timing external run1
@@ -80,7 +80,7 @@ timing external run big
    scipy:  10.228999484587113
 ndspline:  14.08183331683557
 
-self.cc_sel[i, ..., :num_points] = self.cc_sel_base[i][..., None] 
+self.cc_sel[i, ..., :num_points] = self.coefficient_selector_base[i][..., None] 
 self.cc_sel[i, ..., :num_points] += self.ell_work[i][:num_points]
 
 
@@ -93,7 +93,7 @@ ndspline:  14.104107857827955
 
 
 np.add(
-    self.cc_sel_base[i][..., None],
+    self.coefficient_selector_base[i][..., None],
     self.ell_work[i][:num_points], 
     out=self.cc_sel[i, ..., :num_points])
 

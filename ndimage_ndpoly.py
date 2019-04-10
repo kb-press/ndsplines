@@ -1,7 +1,7 @@
 from scipy import ndimage
 import numpy as np
 
-class NdBPoly():
+class NDBSpline():
     def __init__(self, values, knots, order=3, mode='constant', cval=0.0, prefilter=True):
         self.order = order
         if isinstance(knots, np.ndarray): # mesh

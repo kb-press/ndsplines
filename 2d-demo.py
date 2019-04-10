@@ -6,11 +6,11 @@ import os
 
 os.chdir(os.path.expanduser('~/Projects/ndsplines'))
 
-import NDBPoly
+import NDBSpline
 import ndimage_ndpoly
 
 
-importlib.reload(NDBPoly)
+importlib.reload(NDBSpline)
 importlib.reload(ndimage_ndpoly)
 
 # x,y = ogrid[-np.pi:np.pi:50j,-np.pi:np.pi:5j]
@@ -32,7 +32,7 @@ truef = np.sin(newmeshx)*np.sin(newmeshy)
 # np.allclose(splinef, truef)
 skip_size = 32
 
-test_NDBspline = NDBPoly.make_interp_spline(input_coords, fvals, bcs=(NDBPoly.clamped))
+test_NDBspline = NDBSpline.make_interp_spline(input_coords, fvals, bcs=(NDBSpline.clamped))
 # new API for extrapolate/BC behavior requires overriding to match scipy.interpolate.make_interp_spline behavior
 test_NDBspline.extrapolate = np.ones_like(test_NDBspline.extrapolate)
 

@@ -7,11 +7,11 @@ import itertools
 
 os.chdir(os.path.expanduser('~/Projects/ndsplines'))
 
-import NDBPoly
+import NDBSpline
 import ndimage_ndpoly
 
 
-importlib.reload(NDBPoly)
+importlib.reload(NDBSpline)
 importlib.reload(ndimage_ndpoly)
 
 x = np.r_[-1:1:9j] * np.pi
@@ -25,15 +25,15 @@ xx = np.r_[-1:1:1024j]*factor*np.pi
 # ndimage_coef = ndimage.spline_filter(fvals)
 # ndimage_out = ndimage.map_coordinates(ndimage_coef, ((xx-x[0])/(x[1]-x[0]))[None,...], prefilter=False)
 
-# ndimg_poly = ndimage_ndpoly.NDBPoly(fvals, x)
+# ndimg_poly = ndimage_ndpoly.NDBSpline(fvals, x)
 # ndimage_out = ndimg_poly.evaluate(xx)
 
 test_bcs = np.array(list(itertools.chain(
     itertools.product(["natural", "clamped"], repeat=2),
     ((None,None),),
 )))
-NDspline_dict = {"natural": NDBPoly.pinned, "clamped": NDBPoly.clamped, None: -1}
-NDspline_dict = {"natural": NDBPoly.pinned, "clamped": NDBPoly.clamped, None: 0}
+NDspline_dict = {"natural": NDBSpline.pinned, "clamped": NDBSpline.clamped, None: -1}
+NDspline_dict = {"natural": NDBSpline.pinned, "clamped": NDBSpline.clamped, None: 0}
 skip_size = 1
 plt.figure()
 
@@ -52,7 +52,7 @@ for test_bc in test_bcs[plot_sel,:]:
 plt.gca().set_prop_cycle(None)
 
 for test_bc in test_bcs[plot_sel,:]:
-    test_NDBspline = NDBPoly.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
+    test_NDBspline = NDBSpline.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
     NDsplienf = test_NDBspline(xx.copy())
     plt.plot(xx, NDsplienf.squeeze(), )
 

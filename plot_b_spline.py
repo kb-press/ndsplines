@@ -28,14 +28,14 @@ for idx in range(c_max):
 plt.plot(x, np.zeros_like(x), 'kx')
 plt.plot(t, np.arange(t.shape[0])*1/t.max(), 'C0o', alpha=0.5)
 """
-import NdBPoly
+import NDBSpline
 import importlib
 
-importlib.reload(NdBPoly)
-ells = NdBPoly.find_intervals(t, 3, xx.squeeze(), True)
+importlib.reload(NDBSpline)
+ells = NDBSpline.find_intervals(t, 3, xx.squeeze(), True)
 plt.step(xx.squeeze(), ells*1/t.max())
-bases = NdBPoly.eval_bases(t, 3, xx.squeeze(), ells, 0)
-bases2 = NdBPoly.process_bases_call(t, 3, xx.squeeze(), extrapolate=True)
+bases = NDBSpline.eval_bases(t, 3, xx.squeeze(), ells, 0)
+bases2 = NDBSpline.process_bases_call(t, 3, xx.squeeze(), extrapolate=True)
 """
 plt.figure()
 for ell in np.unique(ells):

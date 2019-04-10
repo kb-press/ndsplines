@@ -5,7 +5,10 @@ import scipy_bspl
 """
 TODOs:
 
-implement a least-squares constructor
+implement a least-squares constructor, etc
+
+create wrapper with callback to allow for creating anti-derivative splines, etc
+(use 1D operations that can be iterated over )
 
 """
 pinned = 2
@@ -16,28 +19,23 @@ periodic = -1
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
-class NDBPoly(object):
-    def __init__(self, knots, coeffs, orders=3, periodic=False, extrapolate=True):
+class NDBSpline(object):
+    def __init__(self, knots, coefficients, orders=3, periodic=False, extrapolate=True):
         """
         Parameters
         ----------
         knots : list of ndarrays, 
             shapes=[n_1+orders[i-1], ..., n_ndim+orders[-1]], dtype=np.float_
-        coeffs : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
+        coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
         orders : ndarray, shape=(ndim,), dtype=np.int_
         periodic : ndarray, shape=(ndim,), dtype=np.bool_
         extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
-
-        Notes
-        -----
-        TODO: maybe we don't need to include an extrapolate here? the user
-        can restrict the inputs on __call__?
             
         """
         self.knots = knots
-        self.coeffs = coeffs
+        self.coefficients = coefficients
         self.ndim = len(knots) # dimension of knots
-        self.mdim = coeffs.shape[0] # dimension of coefficeints
+        self.mdim = coefficients.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
@@ -46,15 +44,15 @@ class NDBPoly(object):
         self.u_ops = [[..., i+1] for i in range(self.ndim)]
         self.output_op = [0,...]
 
-        self.cc_sel_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
-        self.c_shape_base = (self.ndim,)+tuple(self.orders+1)
+        self.coefficient_selector_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
+        self.coefficient_shape_base = (self.ndim,)+tuple(self.orders+1)
 
-        self.cur_max_x_size = 0
+        self.current_max_num_points = 0
         self.check_workspace_shapes((self.ndim, 1))
 
         self.u_arg = [subarg for arg in zip(self.eval_work, self.u_ops) for subarg in arg]
 
-    def get_us_and_cc_sel(self, x, nus=0):
+    def compute_basis_coefficient_selector(self, x, nus=0):
         """
         Parameters
         ----------
@@ -87,16 +85,16 @@ class NDBPoly(object):
 
             scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.ell_work[i], self.eval_work[i],)
             np.add(
-                self.cc_sel_base[i][..., None],
+                self.coefficient_selector_base[i][..., None],
                 self.ell_work[i][:num_points], 
                 out=self.cc_sel[i, ..., :num_points])
 
     def check_workspace_shapes(self, x_shape):
-        if self.cur_max_x_size < x_shape[-1]:
-            self.cur_max_x_size = x_shape[-1]
-            self.eval_work = np.empty((self.ndim, self.cur_max_x_size, 2*np.max(self.orders)+3), dtype=np.float_)
-            self.ell_work = np.empty((self.ndim, self.cur_max_x_size, ), dtype=np.int_)
-            self.cc_sel = np.empty(self.c_shape_base + (self.cur_max_x_size,), dtype=np.int_)
+        if self.current_max_num_points < x_shape[-1]:
+            self.current_max_num_points = x_shape[-1]
+            self.eval_work = np.empty((self.ndim, self.current_max_num_points, 2*np.max(self.orders)+3), dtype=np.float_)
+            self.ell_work = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.int_)
+            self.cc_sel = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
 
     def __call__(self, x, nus=0):
         """
@@ -117,9 +115,9 @@ class NDBPoly(object):
                 raise ValueError("nus is wrong shape")
 
         self.check_workspace_shapes(x.shape)
-        self.get_us_and_cc_sel(x, nus)        
+        self.compute_basis_coefficient_selector(x, nus)        
         cc_sel = (slice(None),) + tuple(self.cc_sel[..., :num_points])
-        ccs = self.coeffs[cc_sel]
+        ccs = self.coefficients[cc_sel]
 
         for i in range(self.ndim):
             self.u_arg[2*i] = self.eval_work[i][:num_points, :self.orders[i]+1]
@@ -133,6 +131,8 @@ class NDBPoly(object):
                     (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
         return y_out
 
+def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
+    pass
 
 def make_interp_spline(x, y, bcs=0, orders=3):
     if isinstance(x, np.ndarray): # mesh
@@ -166,10 +166,10 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     deriv_specs = np.asarray((bcs[:,:]>0),dtype=np.int)
 
     knots = []
-    coeffs = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
+    coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
 
     for i in np.arange(ndim)+1:
-        all_other_ax_shape = np.asarray(np.r_[coeffs.shape[1:i],
+        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:i],
             y.shape[i+1:]], dtype=np.int)
         x_line_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) +
             (0,)*(ndim-i))
@@ -184,14 +184,14 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
             line_spline = interpolate.make_interp_spline(xp,
-                coeffs[y_line_sel].T,
+                coefficients[y_line_sel].T,
                 k = order,
                 bc_type=(bc_map[(bcs[i-1,0])],
                          bc_map[(bcs[i-1,1])]),
 
             )
-            coeffs[coeff_line_sel] = line_spline.c.T
+            coefficients[coeff_line_sel] = line_spline.c.T
         knots.append(line_spline.t)
-    return NDBPoly(knots, coeffs, orders, 
+    return NDBSpline(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs %2)==0)

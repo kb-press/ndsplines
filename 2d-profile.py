@@ -1,7 +1,7 @@
 from scipy import interpolate
 import numpy as np
 
-import NDBPoly
+import NDBSpline
 
 
 
@@ -25,7 +25,7 @@ truef = np.sin(newmeshx)*np.sin(newmeshy)
 # np.allclose(splinef, truef)
 skip_size = 32
 
-test_NDBspline = NDBPoly.make_interp_spline(input_coords, fvals, bcs=(NDBPoly.clamped))
+test_NDBspline = NDBSpline.make_interp_spline(input_coords, fvals, bcs=(NDBSpline.clamped))
 # new API for extrapolate/BC behavior requires overriding to match scipy.interpolate.make_interp_spline behavior
 test_NDBspline.extrapolate = np.ones_like(test_NDBspline.extrapolate)
 

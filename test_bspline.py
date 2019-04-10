@@ -2,10 +2,10 @@ from scipy import ndimage, interpolate
 import matplotlib.pyplot as plt
 import numpy as np
 
-import NdBPoly
+import NDBSpline
 import importlib
 import itertools
-importlib.reload(NdBPoly)
+importlib.reload(NDBSpline)
 
 
 ## testing what different BC's do
@@ -18,7 +18,7 @@ x = np.unique(np.r_[-1:1:9j]) * np.pi
 fvals = np.sin(x)
 kval = 3
 print("k=",kval,"x.shape:",x.shape)
-coeffs = ndimage.spline_filter1d(fvals)
+coefficients = ndimage.spline_filter1d(fvals)
 tck = interpolate.splprep(x=fvals.reshape(1,-1), u=x, s=0)
 print("splprep, t:", tck[0][0].shape, "c", tck[0][1][0].shape)
 for test_bc in test_bcs:
@@ -27,10 +27,10 @@ for test_bc in test_bcs:
     print("knots:")
     print(test_Bspline.t)
     print("coeff difference:") # the internal knots of clamped-clamped are the same as ndimage.spline_filter
-    if test_Bspline.c.size == coeffs.size:
-        print(test_Bspline.c - coeffs)
+    if test_Bspline.c.size == coefficients.size:
+        print(test_Bspline.c - coefficients)
     else:
-        print(test_Bspline.c[1:-1] - coeffs)
+        print(test_Bspline.c[1:-1] - coefficients)
     
 ##
 xmax = 9

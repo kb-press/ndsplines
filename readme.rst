@@ -114,7 +114,7 @@ I made the profiling explicit and decoupled from actual source code.
 
 Currently I'm just over 2x slower for 1D case callling single points, and usually
 better than 1.5x slower for 1D case for a vectorized call. This isn't too bad
-given the added funcitonality! I do see that the get_us_and_cc_sel method is
+given the added funcitonality! I do see that the compute_basis_coefficient_selector method is
 spending ~7% of the time on iterator, so the whole function is a good candidate
 for cythonization. 
 

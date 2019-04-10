@@ -16,7 +16,7 @@ extrap = 0
 periodic = -1
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
-class NDBPoly(object):
+class NDBSpline(object):
     def __init__(self, knots, coeffs, orders=3, periodicity=False):
         self.knots = knots
         self.coeffs = coeffs
@@ -178,4 +178,4 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coeffs[coeff_line_sel] = line_spline.c.T
         knots[i-1,...] = (line_spline.t[(None,)*(i-1) + 
             (slice(None),) + (None,)*(ndim-i)])
-    return NDBPoly(knots, coeffs, orders, np.all(bcs==-1, axis=1))
+    return NDBSpline(knots, coeffs, orders, np.all(bcs==-1, axis=1))
