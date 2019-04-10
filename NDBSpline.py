@@ -46,9 +46,9 @@ class NDBSpline(object):
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
 
-        self.input_op = list(i for i in range(self.ndim+1)) + [...,]
-        self.u_ops = [[..., i+1] for i in range(self.ndim)]
-        self.output_op = [0,...]
+        self.coefficient_op = [0,] + list(i for i in range(2,self.ndim+2)) + [1,]
+        self.u_ops = [[1, i+2] for i in range(self.ndim)]
+        self.output_op = [0,1]
 
         self.coefficient_selector_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
         self.coefficient_shape_base = (self.ndim,)+tuple(self.orders+1)
@@ -132,7 +132,7 @@ class NDBSpline(object):
         self.compute_basis_coefficient_selector(x, nus)        
         coefficient_selector = (slice(None),) + tuple(self.coefficient_selector[..., :num_points])
 
-        y_out = np.einsum(self.coefficients[coefficient_selector], self.input_op, 
+        y_out = np.einsum(self.coefficients[coefficient_selector], self.coefficient_op, 
             *self.u_arg, 
             self.output_op)
         y_out = y_out.reshape(
@@ -163,6 +163,8 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     assert x.shape[1] == y.shape[1]
     assert x.ndim == 2
     assert y.ndim == 2
+
+    # TODO: do appropriate shape checks, etc.
     # TODO: check knot shape and order
 
     knot_shapes = tuple(knot.size for knot in knots)
@@ -171,9 +173,9 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
-    observation_tensor_values = np.einsum(*temp_spline.u_arg, [...,] + temp_spline.input_op[1:-1])
+    observation_tensor_values = np.einsum(*temp_spline.u_arg, temp_spline.coefficient_op[1:-1] + [1,])
     observation_tensor = np.zeros((num_points,) + knot_shapes)
-    observation_tensor[(np.arange(num_points),) + tuple(temp_spline.coefficient_selector[..., :num_points])] = observation_tensor_values.T
+    observation_tensor[(np.arange(num_points),) + tuple(temp_spline.coefficient_selector[..., :num_points])] = observation_tensor_values
 
     observation_matrix = observation_tensor.reshape((num_points, -1))
 

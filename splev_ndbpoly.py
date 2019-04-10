@@ -17,22 +17,22 @@ periodic = -1
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 class NDBSpline(object):
-    def __init__(self, knots, coeffs, orders=3, periodicity=False):
+    def __init__(self, knots, coefficients, orders=3, periodicity=False):
         self.knots = knots
-        self.coeffs = coeffs
+        self.coefficients = coefficients
         self.ndim = knots.shape[0]
-        self.mdim = coeffs.shape[0]
+        self.mdim = coefficients.shape[0]
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodicity = np.broadcast_to(periodicity, (self.ndim,))
 
         self.u_ops = []
-        self.input_op = list(range(self.ndim+1)) + [...,]
+        self.coefficient_op = list(range(self.ndim+1)) + [...,]
         self.output_op = [0,...]
         self.tcks = []
 
         for i in np.arange(self.ndim)+1:
             self.u_ops.append([int(i), ...])
-            num_bases = self.coeffs.shape[i]
+            num_bases = self.coefficients.shape[i]
             cs = np.eye(num_bases)
             order = self.orders[i-1]
             knot_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) + 
@@ -114,7 +114,7 @@ class NDBSpline(object):
     def __call__(self, x, nus=0):
         u_mats = self._eval_bases(x, nus)
         u_args = [subarg for arg in zip(u_mats, self.u_ops) for subarg in arg]
-        y_out = np.einsum(self.coeffs, self.input_op, *u_args, self.output_op)
+        y_out = np.einsum(self.coefficients, self.coefficient_op, *u_args, self.output_op)
         return y_out
 
 def make_interp_spline(x, y, bcs=0, orders=3):
@@ -151,10 +151,10 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     knot_shape[1:] = knot_shape[1:] + orders + 1 + deriv_specs.sum(axis=1)
 
     knots = np.zeros(knot_shape)
-    coeffs = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
+    coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
 
     for i in np.arange(ndim)+1:
-        all_other_ax_shape = np.asarray(np.r_[coeffs.shape[1:i],
+        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:i],
             y.shape[i+1:]], dtype=np.int)
         x_line_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) +
             (0,)*(ndim-i))
@@ -169,13 +169,13 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
             line_spline = interpolate.make_interp_spline(xp,
-                coeffs[y_line_sel].T,
+                coefficients[y_line_sel].T,
                 k = order,
                 bc_type=(bc_map[(bcs[i-1,0])],
                          bc_map[(bcs[i-1,1])]),
 
             )
-            coeffs[coeff_line_sel] = line_spline.c.T
+            coefficients[coeff_line_sel] = line_spline.c.T
         knots[i-1,...] = (line_spline.t[(None,)*(i-1) + 
             (slice(None),) + (None,)*(ndim-i)])
-    return NDBSpline(knots, coeffs, orders, np.all(bcs==-1, axis=1))
+    return NDBSpline(knots, coefficients, orders, np.all(bcs==-1, axis=1))
