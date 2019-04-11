@@ -59,6 +59,44 @@ In Python, SciPy provides:
       (`RectBivariateSpline`), or N-D evenly spaced data (`ndimage`).
 
 
+Full comparison:
+interp1d(x, y[, kind, axis, copy, …])  
+CubicSpline(x, y[,
+BPoly(c, x[, e
+
+LinearNDInterpolator(points, values[, …])
+NearestNDInterpolator(x, y)   Nearest-neighbour interpolation in N dimensions.
+interp2d(x, y, z[, kind, copy, 
+interpn(points, values, xi[, method, …])
+RegularGridInterpolator(points, values[, …])
+RectBivariateSpline - see below
+
+interpolate.BSpline --> new Cython implementation of B-Spline
+interpolate.splrep|splprep|splev|... --> FITPACK B-spline wrappers - functional
+interpolate.UnivariateSpline|InterpolatedUnivariateSpline|LSQUnivariateSpline  --> FITPACK - "object oriented"
+(I assume the first two are just splprep with s=0 equivalent)
+
+
+
+interpolate.RectBivariateSpline   Bivariate spline approximation over a rectangular mesh.
+RectSphereBivariateSpline(u, v, r[, s, …])  Bivariate spline approximation over a rectangular mesh on a sphere.
+
+For unstructured data:
+BivariateSpline   Base class for bivariate splines.
+SmoothBivariateSpline(x, y, z[, w, bbox, …])  Smooth bivariate spline approximation.
+SmoothSphereBivariateSpline(theta, phi, r[, …])   Smooth bivariate spline approximation in spherical coordinates.
+LSQBivariateSpline(x, y, z, tx, ty[, w, …])   Weighted least-squares bivariate spline approximation.
+LSQSphereBivariateSpline(theta, phi, r, tt, tp)   Weighted least-squares bivariate spline approximation in spherical coordinates.
+
+Low-level interface to FITPACK functions:
+bisplrep(x, y, z[, w, xb, xe, yb, ye, kx, …])   Find a bivariate B-spline representation of a surface.
+bisplev(x, y, tck[, dx, dy])  Evaluate a bivariate B-spline and its derivatives.
+
+interpolate.SmoothBivariateSpline - -> (dfitpack.surfit_lsq)
+
+TODO: sort out the scipy.interpolate API to determine what to compare to.
+
+
 So far, I have worked on 2 implementations:
     - Using splev on a set of coefficients to evaluate the u_i for each 
       dimension, then collect the evaluation and use einsum to multiply and

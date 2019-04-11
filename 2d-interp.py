@@ -1,19 +1,11 @@
-from scipy import ndimage, interpolate
+from scipy import interpolate
 import matplotlib.pyplot as plt
 import numpy as np
-import importlib
-import os
 
-os.chdir(os.path.expanduser('~/Projects/ndsplines'))
 
 import NDBSpline
-import ndimage_ndpoly
 
 
-importlib.reload(NDBSpline)
-importlib.reload(ndimage_ndpoly)
-
-# x,y = ogrid[-np.pi:np.pi:50j,-np.pi:np.pi:5j]
 x = np.r_[-1:1:5j]*np.pi/2
 y = np.r_[-1:1:5j]*np.pi/2
 meshx, meshy = np.meshgrid(x,y, indexing='ij')
@@ -36,7 +28,8 @@ test_NDBspline = NDBSpline.make_interp_spline(input_coords, fvals, bcs=(NDBSplin
 # new API for extrapolate/BC behavior requires overriding to match scipy.interpolate.make_interp_spline behavior
 test_NDBspline.extrapolate = np.ones_like(test_NDBspline.extrapolate)
 
-print(np.allclose(test_NDBspline(input_coords),fvals))
+print("ND Spline interpolant passes through original data?", np.allclose(test_NDBspline(input_coords),fvals))
+print("ND Spline interpolant passes through original data?", np.allclose(test_NDBspline(newxymesh),truef))
 
 plt.figure()
 plt.plot(x, np.zeros_like(x), 'kx')

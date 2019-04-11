@@ -5,13 +5,13 @@ import scipy_bspl
 """
 TODOs:
 
-implement a least-squares constructor, etc
 
 create wrapper with callback to allow for creating anti-derivative splines, etc
 (use 1D operations that can be iterated over )
 
 break out some of the knot normalization stuff (in interpolate.make_interp_spline)
-to make it easier to make lsq splines?
+to make it easier to make lsq splines? would also be useful for making the
+make_interp_spline more efficient
 
 make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfile?
 
@@ -156,6 +156,16 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
         Default is ``None``.
+
+    Notes
+    -----
+    I construct the observation matrix A, so that A@c = y
+    I am not being particularly careful about structure, sparcity, etc. because 
+    I am assuming a small number of knots relative to the number of data points 
+    and sufficient speed from the numpy linear algebra library (i.e., MKL) to
+    make it unnoticeable.
+
+
     """
     ndim = x.shape[0]
     mdim = y.shape[0]
@@ -167,7 +177,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     # TODO: do appropriate shape checks, etc.
     # TODO: check knot shape and order
 
-    knot_shapes = tuple(knot.size for knot in knots)
+    knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
     
     temp_spline = NDBSpline(knots, np.empty(mdim), orders)
     temp_spline.allocate_workspace_arrays(num_points)
@@ -183,6 +193,9 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T)
     temp_spline.coefficients = lsq_coefficients.T.reshape((mdim,) + knot_shapes )
+
+    # TODO: I think people will want this matrix, is there a better way to give this to a user?
+    temp_spline.observation_matrix = observation_matrix
     return temp_spline
 
 
