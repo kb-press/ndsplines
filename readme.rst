@@ -95,6 +95,8 @@ bisplev(x, y, tck[, dx, dy])  Evaluate a bivariate B-spline and its derivatives.
 interpolate.SmoothBivariateSpline - -> (dfitpack.surfit_lsq)
 
 TODO: sort out the scipy.interpolate API to determine what to compare to.
+TODO: compare to other libraries like
+ https://github.com/johntfoster/bspline, https://github.com/sintefmath/Splipy
 
 
 So far, I have worked on 2 implementations:

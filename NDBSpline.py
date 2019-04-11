@@ -152,7 +152,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_ndim, + orders[-1] + 1)
         Knots and data points must satisfy Schoenberg-Whitney conditions.
     orders : ndarray, shape=(ndim,), dtype=np.int_
-    w : array_like, shape (n,), optional
+    w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
         Default is ``None``.
@@ -189,7 +189,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     observation_matrix = observation_tensor.reshape((num_points, -1))
 
-    # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w)?
+    # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
 
     lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T)
     temp_spline.coefficients = lsq_coefficients.T.reshape((mdim,) + knot_shapes )
