@@ -1,4 +1,4 @@
-import NDBSpline
+import ndsplines
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy import interpolate
@@ -13,7 +13,7 @@ t = np.r_[(x[0],)*(k+1),
           t,
           (x[-1],)*(k+1)]
 
-ndspl = NDBSpline.make_lsq_spline(x[None, :], y[None, :], [t], np.array([k]))
+ndspl = ndsplines.make_lsq_spline(x[None, :], y[None, :], [t], np.array([k]))
 ispl = interpolate.make_lsq_spline(x, y, t, k)
 
 xs = np.linspace(-3, 3, 100)

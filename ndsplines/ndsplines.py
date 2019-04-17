@@ -1,6 +1,10 @@
 import numpy as np
 from scipy import interpolate
-import scipy_bspl
+
+from ndsplines import scipy_bspl
+
+__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'NDBSpline',
+           'make_interp_spline', 'make_lsq_spline']
 
 """
 TODOs:

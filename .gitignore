@@ -1,0 +1,17 @@
+*.swp
+*.pyc
+tags
+__pycache__/
+docs/_build/
+dist/
+*.egg-info/
+.venv*/
+.tox/
+.cache/
+.coverage
+htmlcov/
+.idea/
+.pytest_cache/
+build/
+*.so
+scipy_bspl.c

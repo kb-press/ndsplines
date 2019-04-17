@@ -1,4 +1,4 @@
-import NDBSpline
+import ndsplines 
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -26,7 +26,7 @@ yt = np.r_[(y[0],)*(k+1),
           (y[-1],)*(k+1)]
 ts = [xt, yt]
 
-spl = NDBSpline.make_lsq_spline(input_coords.reshape((2,-1)), meshz.reshape((1,-1)), ts, np.array([3,3]))
+spl = ndsplines.make_lsq_spline(input_coords.reshape((2,-1)), meshz.reshape((1,-1)), ts, np.array([3,3]))
 
 # plt.figure()
 # plt.contour(meshx, meshy, meshz)
