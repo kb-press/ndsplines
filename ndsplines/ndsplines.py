@@ -3,7 +3,7 @@ from scipy import interpolate
 
 from ndsplines import scipy_bspl
 
-__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'NDBSpline',
+__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline']
 
 """
@@ -29,7 +29,7 @@ periodic = -1
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
-class NDBSpline(object):
+class BSplineNDInterpolator(object):
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         """
         Parameters
@@ -183,7 +183,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
     
-    temp_spline = NDBSpline(knots, np.empty(mdim), orders)
+    temp_spline = BSplineNDInterpolator(knots, np.empty(mdim), orders)
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
@@ -282,6 +282,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             )
             coefficients[coeff_line_sel] = line_spline.c.T
         knots.append(line_spline.t)
-    return NDBSpline(knots, coefficients, orders, 
+    return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs %2)==0)
