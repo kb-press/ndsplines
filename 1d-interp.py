@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import itertools
 
-import NDBSpline
+import ndsplines
 
 x = np.r_[-1:-0.5:3j, 0, 0.5:1:3j] *np.pi
 fvals = np.sin(x)
@@ -17,7 +17,7 @@ test_bcs = np.array(list(itertools.chain(
     ((None,None),),
 )))
 
-NDspline_dict = {"natural": NDBSpline.pinned, "clamped": NDBSpline.clamped, None: 0}
+NDspline_dict = {"natural": ndsplines.pinned, "clamped": ndsplines.clamped, None: 0}
 skip_size = 1
 plt.figure()
 
@@ -35,7 +35,7 @@ for test_bc in test_bcs[plot_sel,:]:
 plt.gca().set_prop_cycle(None)
 
 for test_bc in test_bcs[plot_sel,:]:
-    test_NDBspline = NDBSpline.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
+    test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
     NDsplienf = test_NDBspline(xx.copy())
     plt.plot(xx, NDsplienf.squeeze(), label=str(test_bc) + ' (ndspline)' )
 

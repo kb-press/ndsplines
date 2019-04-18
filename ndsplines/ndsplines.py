@@ -1,6 +1,10 @@
 import numpy as np
 from scipy import interpolate
-import scipy_bspl
+
+from ndsplines import scipy_bspl
+
+__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'NDBSpline',
+           'make_interp_spline', 'make_lsq_spline']
 
 """
 TODOs:
@@ -105,7 +109,7 @@ class NDBSpline(object):
                 self.current_max_num_points,
                 2*np.max(self.orders)+3
             ), dtype=np.float_)
-            self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.int_)
+            self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.intc)
             self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
 
     def __call__(self, x, nus=0):

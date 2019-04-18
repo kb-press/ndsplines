@@ -1,6 +1,6 @@
 from scipy import interpolate
 import numpy as np
-import NDBSpline
+import ndsplines
 from line_profiler import LineProfiler
 import timeit
 
@@ -18,18 +18,18 @@ def create_run_scipy():
     return internal_Bspline(xx.copy())
 
 def create_run_ndspline():
-    internal_NDBspline = NDBSpline.make_interp_spline(x, fvals,)    
+    internal_NDBspline = ndsplines.make_interp_spline(x, fvals,)    
     return internal_NDBspline(xx.copy())
 
 def create_run_test():
     internal_Bspline = interpolate.make_interp_spline(x, fvals)
-    internal_NDBspline = NDBSpline.make_interp_spline(x, fvals,)    
+    internal_NDBspline = ndsplines.make_interp_spline(x, fvals,)    
     
     internal_Bspline(xx.copy())
     internal_NDBspline(xx.copy())
     
 external_Bspline = interpolate.make_interp_spline(x, fvals)
-external_NDBspline = NDBSpline.make_interp_spline(x, fvals,)    
+external_NDBspline = ndsplines.make_interp_spline(x, fvals,)    
 
 def run_scipy():
     return external_Bspline(xx)
@@ -58,8 +58,8 @@ print("   scipy: ", timeit.timeit(run_scipy, number=1_000))
 print("ndspline: ", timeit.timeit(run_ndspline, number=1_000))
 
 lp = LineProfiler()
-lp.add_function(NDBSpline.NDBSpline.compute_basis_coefficient_selector)
-lp.add_function(NDBSpline.NDBSpline.__call__)
+lp.add_function(ndsplines.NDBSpline.compute_basis_coefficient_selector)
+lp.add_function(ndsplines.NDBSpline.__call__)
 lp_wrapper = lp(external_NDBspline.__call__)
 lp_wrapper(0.0)
 lp.print_stats()

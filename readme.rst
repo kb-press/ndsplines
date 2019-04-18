@@ -160,13 +160,18 @@ for cythonization.
 
 Building
 --------
+
 After profiling revealed that the scipy.interpolate._bspl implementation is 10x
 faster, I copied that code over to refactor to make the necessary parts accessible.
-There may be other ways to build, but from the directory
 
-$ python setup.py build_ext -i
+Building requires Cython and Numpy::
 
-definitely builds it and makes it importable, but I'm not sure if it's the only/best
-way.
+    $ pip install cython numpy
 
+Now build the ``scipy_bspl`` module::
 
+    $ python setup.py build_ext -i
+
+Now you can install::
+
+    $ pip install -e .

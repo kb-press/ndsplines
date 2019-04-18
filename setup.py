@@ -1,13 +1,30 @@
-from distutils.core import setup
-from distutils.extension import Extension
+import os
+from setuptools import setup, Extension
 from Cython.Build import cythonize
 import numpy
 
+name = "ndsplines"
+
+extensions = [
+    Extension(f"{name}.scipy_bspl",
+              [os.path.join(name, "scipy_bspl.pyx")],
+              include_dirs=[numpy.get_include()],
+              depends=[os.path.join(name, "scipy_bspl.h")]),
+]
+
 setup(
-    ext_modules=cythonize([
-        Extension("scipy_bspl", 
-            ["scipy_bspl.pyx"],
-            include_dirs=[numpy.get_include()],
-            depends=['scipy_bspl.h']),
-    ],)
+    name=name,
+    version="0.0.1",
+    description="Multi-dimensional splines",
+    url="https://github.com/sixpearls/ndsplines",
+    author="Benjamin Margolis",
+    packages=["ndsplines"],
+    ext_modules=cythonize(extensions),
+    # TODO: figure out how this is supposed to work
+    # https://setuptools.readthedocs.io/en/latest/setuptools.html#new-and-changed-setup-keywords
+    setup_requires=['Cython', 'numpy'],
+    install_requires=['Cython', 'numpy', 'scipy'],
+    extras_require={
+        'examples': ['matplotlib'],
+    },
 )
