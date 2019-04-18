@@ -10,7 +10,7 @@ cimport numpy as cnp
 
 cimport cython
 
-cdef extern from "scipy_bspl.h":
+cdef extern from "_bspl.h":
     void _deBoor_D(double *t, double x, int k, int ell, int m, double *result) nogil
 
 cdef extern from "numpy/npy_math.h":

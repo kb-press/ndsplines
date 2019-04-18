@@ -168,7 +168,7 @@ Building requires Cython and Numpy::
 
     $ pip install cython numpy
 
-Now build the ``scipy_bspl`` module::
+Now build the ``_bspl`` module::
 
     $ python setup.py build_ext -i
 
