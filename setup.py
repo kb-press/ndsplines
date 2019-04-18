@@ -6,10 +6,10 @@ import numpy
 name = "ndsplines"
 
 extensions = [
-    Extension(f"{name}.scipy_bspl",
-              [os.path.join(name, "scipy_bspl.pyx")],
+    Extension(f"{name}._bspl",
+              [os.path.join(name, "_bspl.pyx")],
               include_dirs=[numpy.get_include()],
-              depends=[os.path.join(name, "scipy_bspl.h")]),
+              depends=[os.path.join(name, "_bspl.h")]),
 ]
 
 setup(

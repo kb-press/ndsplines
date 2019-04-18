@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import interpolate
 
-from ndsplines import scipy_bspl
+from ndsplines._bspl import evaluate_spline
 
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline']
@@ -93,7 +93,7 @@ class BSplineNDInterpolator(object):
                 extrapolate_flag = True
 
 
-            scipy_bspl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
                 self.interval_workspace[i][:num_points], 

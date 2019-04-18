@@ -14,5 +14,5 @@ htmlcov/
 .pytest_cache/
 build/
 *.so
-scipy_bspl.*.pyd
-scipy_bspl.c
+_bspl.*.pyd
+_bspl.c
