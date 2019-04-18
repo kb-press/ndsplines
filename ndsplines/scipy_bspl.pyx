@@ -94,7 +94,7 @@ def evaluate_spline(const double[::1] t,
              const double[::1] xp,
              int nu,
              bint extrapolate,
-             cnp.int_t[::1] interval_workspace,
+             int[::1] interval_workspace,
              double[:, ::1] basis_workspace):
     """
     Evaluate a spline in the B-spline basis.
