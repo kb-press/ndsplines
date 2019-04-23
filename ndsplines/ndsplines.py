@@ -139,8 +139,8 @@ class BSplineNDInterpolator(object):
         y_out = np.einsum(self.coefficients[coefficient_selector], self.coefficient_op, 
             *self.u_arg, 
             self.output_op)
-        y_out = y_out.reshape(
-                    (self.mdim,) + x_shape[1:] if x_ndim!=1 else x_shape)
+        if (x_ndim > 1) and ((self.ndim > 1) or (size[0] != self.ndim)):
+            y_out = y_out.reshape((self.mdim,) + x_shape[1:])
         return y_out
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):

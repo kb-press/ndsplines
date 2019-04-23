@@ -29,7 +29,7 @@ funcs = [gaussian, sin, tanh]
 def wrap2d(funcx, funcy):
     def func2d(x_in, y_in):
         return funcx(x_in)*funcy(y_in)
-    func.__name__ = '_'.join([funcx.__name__, funcy.__name__])
+    func2d.__name__ = '_'.join([funcx.__name__, funcy.__name__])
     return func2d
 
 funcs = [ wrap2d(*funcs_to_wrap) for funcs_to_wrap in itertools.combinations_with_replacement(funcs, r=2)]

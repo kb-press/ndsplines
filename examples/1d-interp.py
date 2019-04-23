@@ -54,7 +54,7 @@ for func in funcs:
     for test_bc in test_bcs[plot_sel,:]:
         test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
         NDsplienf = test_NDBspline(xx.copy())
-        plt.plot(xx, NDsplienf.squeeze(), label=str(test_bc) + ' (ndspline)' )
+        plt.plot(xx, NDsplienf[0], label=str(test_bc) + ' (ndspline)' )
 
     
     plt.plot(xx, truef, 'k--', label="True " + func.__name__)
