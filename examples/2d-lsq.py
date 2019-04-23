@@ -37,5 +37,5 @@ fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
 ax.scatter(meshx, meshy, meshz, alpha=0.25)
-ax.scatter(meshx, meshy, spl(input_coords),)
+ax.plot_wireframe(meshx, meshy, spl(input_coords)[0], color='C1')
 plt.show()

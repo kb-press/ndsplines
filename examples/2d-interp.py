@@ -1,49 +1,68 @@
-from scipy import interpolate
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from scipy import interpolate
+from scipy.stats import norm
+from mpl_toolkits.mplot3d import Axes3D
 
+import itertools
 
 import ndsplines
 
+def gaussian(x_in):
+    z = norm.ppf(.995)
+    x = z*(2*x_in-1)
+    return norm.pdf(x)
 
-x = np.r_[-1:1:5j]*np.pi/2
-y = np.r_[-1:1:5j]*np.pi/2
-meshx, meshy = np.meshgrid(x,y, indexing='ij')
-input_coords = np.r_['0,3', meshx, meshy]
-fvals = np.sin(meshx)*np.sin(meshy)# np.sqrt(meshx**2 + meshy**2)
+def sin(x_in):
+    x = np.pi*(x_in-0.5)
+    return np.sin(x)
+
+def tanh(x_in):
+    x = 2*np.pi*(x_in-0.5)
+    return np.tanh(x)
+
+def dist(x_in, y_in):
+    return np.sqrt((x_in-0.25)**2 + (y_in-0.25)**2)
+
+funcs = [gaussian, sin, tanh]
+
+def wrap2d(funcx, funcy):
+    def func2d(x_in, y_in):
+        return funcx(x_in)*funcy(y_in)
+    func.__name__ = '_'.join([funcx.__name__, funcy.__name__])
+    return func2d
+
+funcs = [ wrap2d(*funcs_to_wrap) for funcs_to_wrap in itertools.combinations_with_replacement(funcs, r=2)]
+funcs.append(dist)
+
+x = np.linspace(0, 1, 7)
+y = np.linspace(0, 1, 7)
+
+xx = np.linspace(0,1,64) 
+yy = np.linspace(0,1,64)
+
+xx = np.linspace(-.25, 1.25, 64)
+yy = np.linspace(-.25, 1.25, 64)
+k = 3
 
 
-factor = 1.25
-newx = np.r_[-1:1:1024j]*factor*np.pi/2
-newy = np.r_[-1:1:5j]*np.pi/2
-newmeshx, newmeshy = np.meshgrid(newx,newy, indexing='ij')
-newxymesh = np.r_['0,3', newmeshx, newmeshy]
+meshx, meshy = np.meshgrid(x, y, indexing='ij')
+gridxy = np.r_['0,3', meshx, meshy]
 
-truef = np.sin(newmeshx)*np.sin(newmeshy)
 
-# np.allclose(splinef, truef)
-skip_size = 32
+meshxx, meshyy = np.meshgrid(xx, yy, indexing='ij')
+gridxxyy = np.r_['0,3', meshxx, meshyy]
 
-test_NDBspline = ndsplines.make_interp_spline(input_coords, fvals,
-                                              bcs=(ndsplines.clamped))
-# new API for extrapolate/BC behavior requires overriding to match scipy.interpolate.make_interp_spline behavior
-test_NDBspline.extrapolate = np.ones_like(test_NDBspline.extrapolate)
+for func in funcs:
+    fvals = func(meshx, meshy)
+    truef = func(meshxx, meshyy)
+    test_NDBspline = ndsplines.make_interp_spline(gridxy, fvals,)
+    test_RectSpline = interpolate.RectBivariateSpline(x, y, fvals)
 
-print("ND Spline interpolant passes through original data?", np.allclose(test_NDBspline(input_coords),fvals))
-print("ND Spline interpolant passes through original data?", np.allclose(test_NDBspline(newxymesh),truef))
-
-plt.figure()
-plt.plot(x, np.zeros_like(x), 'kx')
-plt.plot(newx[::skip_size], truef[::skip_size,:], 'x')
-plt.gca().set_prop_cycle(None)
-
-for yidx, yy in enumerate(y):
-    test_Bspline = interpolate.make_interp_spline(x, fvals[:,yidx], k=3, bc_type="clamped")
-    bsplinef = test_Bspline(newx, extrapolate=False)
-    plt.plot(newx, bsplinef, 'k--', lw=2.0)
-
-plt.gca().set_prop_cycle(None)
-splinef = test_NDBspline(newxymesh)
-plt.plot(newx, splinef[0,:,:], alpha=0.75)
-
-plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    
+    ax.plot_wireframe(meshxx, meshyy, truef, alpha=0.25, color='C0')
+    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[0], color='C1')
+    ax.plot_wireframe(meshxx, meshyy, test_RectSpline(meshxx, meshyy, grid=False), color='C2')
+    plt.show()
