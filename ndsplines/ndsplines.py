@@ -284,4 +284,4 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         knots.append(line_spline.t)
     return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
-        (bcs %2)==0)
+        (bcs >= 0))
