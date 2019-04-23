@@ -63,6 +63,6 @@ for func in funcs:
     ax = fig.add_subplot(111, projection='3d')
     
     ax.plot_wireframe(meshxx, meshyy, truef, alpha=0.25, color='C0')
-    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[0], color='C1')
+    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy), color='C1')
     ax.plot_wireframe(meshxx, meshyy, test_RectSpline(meshxx, meshyy, grid=False), color='C2')
     plt.show()

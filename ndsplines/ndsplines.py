@@ -36,16 +36,22 @@ class BSplineNDInterpolator(object):
         ----------
         knots : list of ndarrays, 
             shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
-        coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
+        coefficients : ndarray, shape=(mdim or None, n_1, n_2, ..., n_ndim), dtype=np.float_
         orders : ndarray, shape=(ndim,), dtype=np.int_
         periodic : ndarray, shape=(ndim,), dtype=np.bool_
         extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
             
         """
         self.knots = knots
-        self.coefficients = coefficients
         self.ndim = len(knots) # dimension of knots
-        self.mdim = coefficients.shape[0] # dimension of coefficeints
+        if coefficients.ndim == self.ndim:
+            self.mdim = 1
+            self.squeeze = True
+            self.coefficients = coefficients[None, ...]
+        else:
+            self.mdim = coefficients.shape[0] # dimension of coefficeints
+            self.coefficients = coefficients
+            self.squeeze = False
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
@@ -141,6 +147,8 @@ class BSplineNDInterpolator(object):
             self.output_op)
         if (x_ndim > 1) and ((self.ndim > 1) or (size[0] != self.ndim)):
             y_out = y_out.reshape((self.mdim,) + x_shape[1:])
+        if self.squeeze:
+            return y_out.squeeze()
         return y_out
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
@@ -239,11 +247,13 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     else:
         raise ValueError("Don't know how to interpret x")
     
+    squeeze = False
     if y.ndim == ndim:
         # how can you tell if y needs a [None, ...] or [...] ?
         # same question as to whether ndim is y.ndim or y.ndim-1
         # I think this is the right answer. 
         y = y[None, ...]
+        squeeze = True
     elif y.ndim == ndim+1:
         pass
     else:
@@ -282,6 +292,9 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             )
             coefficients[coeff_line_sel] = line_spline.c.T
         knots.append(line_spline.t)
+
+    if squeeze:
+        coefficients = coefficients.squeeze()
     return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs %2)==0)
