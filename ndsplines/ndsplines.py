@@ -129,7 +129,7 @@ class BSplineNDInterpolator(object):
         num_points = x.shape[-1]
 
         if isinstance(nus, np.ndarray):
-            if nus.shape != 1 and nus.shape != self.ndim:
+            if nus.ndim != 1 or nus.size != self.ndim:
                 raise ValueError("nus is wrong shape")
 
         self.allocate_workspace_arrays(x.shape[-1])
