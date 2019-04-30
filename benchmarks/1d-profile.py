@@ -1,3 +1,10 @@
+"""
+=====================================
+1-Dimensional Interpolation Profiling
+=====================================
+"""
+
+
 from scipy import interpolate
 import numpy as np
 import ndsplines
