@@ -175,3 +175,9 @@ Now build the ``_bspl`` module::
 Now you can install::
 
     $ pip install -e .
+
+Build the docs::
+
+    $ pip install -e .[docs]
+    $ cd docs
+    $ make html
