@@ -16,3 +16,4 @@ build/
 *.so
 _bspl.*.pyd
 _bspl.c
+docs/auto_*

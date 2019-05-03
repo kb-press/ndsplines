@@ -30,18 +30,17 @@ bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
 class BSplineNDInterpolator(object):
+    """
+    Parameters
+    ----------
+    knots : list of ndarrays,
+        shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
+    coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
+    orders : ndarray, shape=(ndim,), dtype=np.int_
+    periodic : ndarray, shape=(ndim,), dtype=np.bool_
+    extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
+    """
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
-        """
-        Parameters
-        ----------
-        knots : list of ndarrays, 
-            shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
-        coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
-        orders : ndarray, shape=(ndim,), dtype=np.int_
-        periodic : ndarray, shape=(ndim,), dtype=np.bool_
-        extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
-            
-        """
         self.knots = knots
         self.coefficients = coefficients
         self.ndim = len(knots) # dimension of knots

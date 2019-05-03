@@ -1,3 +1,9 @@
+"""
+==================================
+1D ndsplines vs. scipy.interpolate
+==================================
+"""
+
 import numpy as np
 import gc
 import time
@@ -14,7 +20,7 @@ n_iter = 10
 def timeit(func, n_iter=1, return_samps=True, **func_kwargs):
     results = np.empty(n_iter, dtype=np.double)
     for i in range(n_iter):
-        gc.collect()
+        # gc.collect()
 
         tstart = time.time()
         func(**func_kwargs)
