@@ -3,6 +3,9 @@ Routines for evaluating and manipulating B-splines.
 
 """
 
+# This file contains code from SciPy which has been adapted to suit the needs
+# of ndsplines (scipy/interpolate/_bspl.pyx). See LICENSE for details.
+
 from __future__ import absolute_import
 
 import numpy as np
