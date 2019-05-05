@@ -1,5 +1,8 @@
 /*
  * B-spline evaluation routine.
+ *
+ * This file contains code from SciPy which has been adapted to suit the needs
+ * of ndsplines (scipy/interpolate/src/__fitpack.h). See LICENSE for details.
  */
 
 static NPY_INLINE void

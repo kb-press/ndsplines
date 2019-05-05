@@ -20,6 +20,7 @@ setup(
     author="Benjamin Margolis",
     packages=["ndsplines"],
     ext_modules=cythonize(extensions),
+    license='BSD',
     # TODO: figure out how this is supposed to work
     # https://setuptools.readthedocs.io/en/latest/setuptools.html#new-and-changed-setup-keywords
     setup_requires=['Cython', 'numpy'],
