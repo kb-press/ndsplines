@@ -30,15 +30,28 @@ bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
 class BSplineNDInterpolator(object):
-    """
+    r"""Multivariate tensor-product spline in the B-spline basis. A general `N`
+    dimensional tensor product B-spline is given by 
+
+    .. math::
+
+        S(x_1, ..., x_N) = \sum_{i_1=0}^{n_1-1}  \cdots \sum_{i_N=0}^{n_N-1} c_{i_1, ..., i_N} \prod_{j = i}^{N} B_{i_j;k_j,t_j}(x_j)
+
+    where :math:`B_{i_j;k_j,t_j}` is the :math:`i_j`-th B-spline basis function
+    of degree :math:`k_j` over the knots :math:`{t_j}`.
+
+
     Parameters
     ----------
+
     knots : list of ndarrays,
         shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
     coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
     orders : ndarray, shape=(ndim,), dtype=np.int_
     periodic : ndarray, shape=(ndim,), dtype=np.bool_
     extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
+
+
     """
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
@@ -203,8 +216,22 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
 
 def make_interp_spline(x, y, bcs=0, orders=3):
-    """
+    r"""
     Construct an interpolating B-spline.
+
+
+    The basic idea of (tensor product) interpolating splines is that (in each
+    dimension) you have a :math:`n` (or :math:`n_j`, with :math:`j=1,\ldots,N` 
+    indicating the dimension) samples of possibly un-evenly spaced data 
+    :math:`(t_i, y_i=f(t_i))`  (so multi-dimensional data can be rectangular but
+    not unstructured). A B-spline is a piecewise :math:`k`-th (:math:`k_j`-th) 
+    order polynomial interpolant that can be constructed with nice properties 
+    such as :math:`C^{k-1}` continuity. The B-Spline interpolant is represented
+    by :math:`n+k+1` knots, which for interpolating splines are 
+    essentially the points :math:`t_i` where the function is sampled, with 
+    :math:`k+1` extra points that are determined by the desired properties at 
+    the ends of the interpolant, and :math:`n` coefficients which are the 
+    projection of the :math:`y_i` data onto the B-spline basis functions.
 
     Parameters
     ----------

@@ -2,7 +2,7 @@
 ndsplines
 =========
 
-:math:`n`-dimensional splines.
+.. include:: ../readme.rst
 
 .. toctree::
    :maxdepth: 1
