@@ -1,16 +1,39 @@
 import os
 from setuptools import setup, Extension
-from Cython.Build import cythonize
+from distutils.command.sdist import sdist as _sdist
 import numpy
+
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    use_cython = False
+else:
+    use_cython = True
 
 name = "ndsplines"
 
-extensions = [
-    Extension(f"{name}._bspl",
-              [os.path.join(name, "_bspl.pyx")],
-              include_dirs=[numpy.get_include()],
-              depends=[os.path.join(name, "_bspl.h")]),
-]
+cmdclass = {}
+
+if use_cython:
+    extensions = cythonize([
+        Extension(f"{name}._bspl",
+                  [os.path.join(name, "_bspl.pyx")],
+                  include_dirs=[numpy.get_include()],
+                  depends=[os.path.join(name, "_bspl.h")]),
+    ])
+
+    class sdist(_sdist):
+        def run(self):
+            cythonize(['cython/mycythonmodule.pyx'])
+            _sdist.run(self)
+    cmdclass['sdist'] = sdist
+else:
+    extensions = [
+        Extension(f"{name}._bspl",
+                  [os.path.join(name, "_bspl.c")],
+                  include_dirs=[numpy.get_include()],
+                  depends=[os.path.join(name, "_bspl.h")])
+    ]
 
 setup(
     name=name,
@@ -19,12 +42,11 @@ setup(
     url="https://github.com/sixpearls/ndsplines",
     author="Benjamin Margolis",
     packages=["ndsplines"],
-    ext_modules=cythonize(extensions),
+    cmdclass=cmdclass,
+    ext_modules=extensions,
     license='BSD',
-    # TODO: figure out how this is supposed to work
-    # https://setuptools.readthedocs.io/en/latest/setuptools.html#new-and-changed-setup-keywords
-    setup_requires=['Cython', 'numpy'],
-    install_requires=['Cython', 'numpy', 'scipy'],
+    setup_requires=['numpy'],
+    install_requires=['numpy', 'scipy'],
     extras_require={
         'examples': ['matplotlib'],
         'docs': ['sphinx', 'sphinx_gallery'],
