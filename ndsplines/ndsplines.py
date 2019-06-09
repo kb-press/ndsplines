@@ -11,7 +11,7 @@ else:
     default_implementation = _bspl
 
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline']
+           'make_interp_spline', 'make_lsq_spline', 'default_implementation']
 
 """
 TODOs:

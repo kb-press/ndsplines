@@ -59,7 +59,9 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
     if do_return:
         return ell
 
-def eval_bases(t, k, x, ell, nu=0, workspace=None):
+def evaluate_spline(t, k, x, nu=0, extrapolate=False, 
+    interval_workspace=None, 
+    basis_workspace=None):
     """
     Evaluate the k+1 non-zero spline basis functions for x
 
@@ -91,13 +93,20 @@ def eval_bases(t, k, x, ell, nu=0, workspace=None):
 
     s = x.size
 
+    if (not isinstance(interval_workspace, np.ndarray) or 
+            (interval_workspace.dtype != np.int_) or
+            (interval_workspace.shape[0] < s)):
+        raise ValueError("interval_workspace has invalid shape or dtype")
+    ell = find_intervals(t, k, x, extrapolate)
+
+    workspace = basis_workspace.T
+
     do_return = False
     if (not isinstance(workspace, np.ndarray) or 
             (workspace.dtype != np.float_) or
             (workspace.shape[0] < 2*k+3) or
             (workspace.shape[1] < s)):
-        workspace = np.empty((2*k+3, s), dtype=np.float_)
-        do_return = True
+        raise ValueError("basis_workspace has invalid shape or dtype")
 
     u = workspace[:k+1,:s]
     w = workspace[k+1:2*k+1,:s]
@@ -143,6 +152,8 @@ def eval_bases(t, k, x, ell, nu=0, workspace=None):
             u[n, neq_test] = tau
 
         w[:] = u[:k].copy()
+
+    interval_workspace[:s] = ell - k
 
     if do_return:
         return u
