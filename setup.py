@@ -1,6 +1,5 @@
 import os
 from setuptools import setup, Extension
-from distutils.command.sdist import sdist as _sdist
 
 try:
     import numpy
