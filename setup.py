@@ -18,8 +18,6 @@ else:
 
 name = "ndsplines"
 
-cmdclass = {}
-
 if use_cython and use_numpy:
     extensions = cythonize([
         Extension(f"{name}._bspl",
@@ -28,11 +26,6 @@ if use_cython and use_numpy:
                   depends=[os.path.join(name, "_bspl.h")]),
     ])
 
-    class sdist(_sdist):
-        def run(self):
-            cythonize(['cython/mycythonmodule.pyx'])
-            _sdist.run(self)
-    cmdclass['sdist'] = sdist
 elif use_numpy:
     extensions = [
         Extension(f"{name}._bspl",
@@ -50,7 +43,6 @@ setup(
     url="https://github.com/sixpearls/ndsplines",
     author="Benjamin Margolis",
     packages=["ndsplines"],
-    cmdclass=cmdclass,
     ext_modules=extensions,
     license='BSD',
     setup_requires=['numpy'],
