@@ -17,29 +17,29 @@ else:
     use_cython = True
 
 name = "ndsplines"
-extension = '_bspl'
+extname = '_bspl'
 
 cmdclass = {}
 
 if use_cython and use_numpy:
     extensions = cythonize([
-        Extension("{}.{}".format(name, extension),
-                  [os.path.join(name, "{}.pyx".format(extension))],
+        Extension("{}.{}".format(name, extname),
+                  [os.path.join(name, "{}.pyx".format(extname))],
                   include_dirs=[numpy.get_include()],
-                  depends=[os.path.join(name, "{}.h".format(extension))]),
+                  depends=[os.path.join(name, "{}.h".format(extname))]),
     ])
 
     class sdist(_sdist):
         def run(self):
-            cythonize([os.path.join(name, "{}.pyx".extension())])
+            cythonize([os.path.join(name, "{}.pyx".format(extname))])
             _sdist.run(self)
     cmdclass['sdist'] = sdist
 elif use_numpy:
     extensions = [
-        Extension("{}.{}".format(name, extension),
-                  [os.path.join(name, "{}.c".format(extension))],
+        Extension("{}.{}".format(name, extname),
+                  [os.path.join(name, "{}.c".format(extname))],
                   include_dirs=[numpy.get_include()],
-                  depends=[os.path.join(name, "{}.h".format(extension))])
+                  depends=[os.path.join(name, "{}.h".format(extname))])
     ]
 else:
     extensions = []
