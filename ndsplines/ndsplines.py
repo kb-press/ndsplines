@@ -1,10 +1,17 @@
 import numpy as np
 from scipy import interpolate
 
-from ndsplines._bspl import evaluate_spline
+from ndsplines import _npy_bspl
+
+try:
+    from ndsplines import _bspl
+except ImportError:
+    default_implementation = _npy_bspl
+else:
+    default_implementation = _bspl
 
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline']
+           'make_interp_spline', 'make_lsq_spline', 'default_implementation']
 
 """
 TODOs:
@@ -40,10 +47,12 @@ class BSplineNDInterpolator(object):
     periodic : ndarray, shape=(ndim,), dtype=np.bool_
     extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
     """
-    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
+    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True, implementation=default_implementation):
+        self.implementation = implementation
         self.knots = knots
         self.coefficients = coefficients
         self.ndim = len(knots) # dimension of knots
+        self.nis = np.array([len(knot) for knot in knots])
         self.mdim = coefficients.shape[0] # dimension of coefficeints
         self.orders = np.broadcast_to(orders, (self.ndim,))
         self.periodic = np.broadcast_to(periodic, (self.ndim,))
@@ -92,7 +101,7 @@ class BSplineNDInterpolator(object):
                 extrapolate_flag = True
 
 
-            evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            self.implementation.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
                 self.interval_workspace[i][:num_points], 
