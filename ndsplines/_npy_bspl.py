@@ -53,7 +53,7 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
 
     # TODO: can we pre-allocate this? or is there a better way to implement
     # this whole function?
-    where_test = np.where(test)
+    where_test = np.nonzero(test)
     ell[where_test[1]] = where_test[0]
 
     if do_return:
