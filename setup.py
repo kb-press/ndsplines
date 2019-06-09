@@ -1,7 +1,13 @@
 import os
 from setuptools import setup, Extension
 from distutils.command.sdist import sdist as _sdist
-import numpy
+
+try:
+    import numpy
+except ImportError:
+    use_numpy = False
+else:
+    use_numpy = True
 
 try:
     from Cython.Build import cythonize
@@ -14,7 +20,7 @@ name = "ndsplines"
 
 cmdclass = {}
 
-if use_cython:
+if use_cython and use_numpy:
     extensions = cythonize([
         Extension(f"{name}._bspl",
                   [os.path.join(name, "_bspl.pyx")],
@@ -27,13 +33,15 @@ if use_cython:
             cythonize(['cython/mycythonmodule.pyx'])
             _sdist.run(self)
     cmdclass['sdist'] = sdist
-else:
+elif use_numpy:
     extensions = [
         Extension(f"{name}._bspl",
                   [os.path.join(name, "_bspl.c")],
                   include_dirs=[numpy.get_include()],
                   depends=[os.path.join(name, "_bspl.h")])
     ]
+else:
+    extensions = []
 
 setup(
     name=name,
