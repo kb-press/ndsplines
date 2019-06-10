@@ -33,14 +33,15 @@ elif use_numpy:
         Extension("{}.{}".format(name, extname),
                   [os.path.join(name, "{}.c".format(extname)),],
                   include_dirs=[numpy.get_include(),],
-                  depends=[os.path.join(name, "{}.h".format(extname))])
+                  depends=[os.path.join(name, "{}.h".format(extname)),],
+                  optional=True)
     ]
 else:
     extensions = []
 
 setup(
     name=name,
-    version="0.0.3",
+    version="0.0.5",
     description="Multi-dimensional splines",
     url="https://github.com/sixpearls/ndsplines",
     author="Benjamin Margolis",
