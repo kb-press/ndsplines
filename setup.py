@@ -23,7 +23,7 @@ if use_cython and use_numpy:
         Extension("{}.{}".format(name, extname),
                   [os.path.join(name, "{}.pyx".format(extname)),
                    os.path.join(name, "{}.h".format(extname)),],
-                  include_dirs=[numpy.get_include(),],
+                  include_dirs=[numpy.get_include(), name,],
                   depends=[os.path.join(name, "{}.h".format(extname))]),
     ])
 
@@ -32,7 +32,7 @@ elif use_numpy:
         Extension("{}.{}".format(name, extname),
                   [os.path.join(name, "{}.c".format(extname)),
                    os.path.join(name, "{}.h".format(extname)),],
-                  include_dirs=[numpy.get_include(),],
+                  include_dirs=[numpy.get_include(), name,],
                   depends=[os.path.join(name, "{}.h".format(extname)),],
                   optional=True)
     ]
