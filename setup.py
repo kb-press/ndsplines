@@ -22,8 +22,7 @@ if use_cython and use_numpy:
     extensions = cythonize([
         Extension("{}.{}".format(name, extname),
                   [os.path.join(name, "{}.pyx".format(extname)),
-                   os.path.join(name, "{}.h".format(extname)),
-                  ],
+                   os.path.join(name, "{}.h".format(extname)),],
                   include_dirs=[numpy.get_include(),],
                   depends=[os.path.join(name, "{}.h".format(extname))]),
     ])
@@ -31,7 +30,8 @@ if use_cython and use_numpy:
 elif use_numpy:
     extensions = [
         Extension("{}.{}".format(name, extname),
-                  [os.path.join(name, "{}.c".format(extname)),],
+                  [os.path.join(name, "{}.c".format(extname)),
+                   os.path.join(name, "{}.h".format(extname)),],
                   include_dirs=[numpy.get_include(),],
                   depends=[os.path.join(name, "{}.h".format(extname)),],
                   optional=True)

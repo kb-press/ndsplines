@@ -1,3 +1,2 @@
 include readme.rst
 include LICENSE
-include ndsplines/_bspl.h
