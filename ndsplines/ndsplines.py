@@ -13,6 +13,11 @@ else:
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline', 'default_implementation']
 
+import operator
+from scipy._lib.six import string_types
+from scipy.linalg import (get_lapack_funcs, LinAlgError,
+                          cholesky_banded, cho_solve_banded)
+
 """
 TODOs:
 
@@ -211,6 +216,9 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     return temp_spline
 
 
+from scipy.interpolate._bsplines import _as_float_array, _get_dtype, _augknt, _convert_string_aliases, _process_deriv_spec, _bspl, prod, _not_a_knot
+
+
 def make_interp_spline(x, y, bcs=0, orders=3):
     """
     Construct an interpolating B-spline.
@@ -266,13 +274,36 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     knots = []
     coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
 
+    axis=0
+    check_finite=True
+
     for i in np.arange(ndim)+1:
         all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:i],
             y.shape[i+1:]], dtype=np.int)
         x_line_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) +
             (0,)*(ndim-i))
-        xp = x[x_line_sel]
-        order = orders[i-1]
+        x_slice = x[x_line_sel]
+        k = orders[i-1]
+
+        bc_type=(bc_map[(bcs[i-1,0])],
+                 bc_map[(bcs[i-1,1])])
+
+        #=======================================
+        # START FROM SCIPY
+        #=======================================
+        if bc_type is None or bc_type == 'not-a-knot':
+            deriv_l, deriv_r = None, None
+        elif isinstance(bc_type, string_types):
+            deriv_l, deriv_r = bc_type, bc_type
+        else:
+            try:
+                deriv_l, deriv_r = bc_type
+            except TypeError:
+                raise ValueError("Unknown boundary condition: %s" % bc_type)
+        #=======================================
+        # END FROM SCIPY
+        #=======================================
+
         for idx in np.ndindex(*all_other_ax_shape):
             offset_axes_remaining_sel = (tuple(idx[i-1:] + 
                 deriv_specs[i:,0]))
@@ -281,15 +312,136 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 offset_axes_remaining_sel)
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
-            line_spline = interpolate.make_interp_spline(xp,
-                coefficients[y_line_sel].T,
-                k = order,
-                bc_type=(bc_map[(bcs[i-1,0])],
-                         bc_map[(bcs[i-1,1])]),
 
-            )
-            coefficients[coeff_line_sel] = line_spline.c.T
-        knots.append(line_spline.t)
+            y_slice = coefficients[y_line_sel].T
+
+            t = None
+
+            #=======================================
+            # START FROM SCIPY
+            #=======================================
+
+            if not -y_slice.ndim <= axis < y_slice.ndim:
+                raise ValueError("axis {} is out of bounds".format(axis))
+            if axis < 0:
+                axis += y_slice.ndim
+
+            # special-case k=0 right away
+            if k == 0:
+                if any(_ is not None for _ in (t, deriv_l, deriv_r)):
+                    raise ValueError("Too much info for k=0: t and bc_type can only "
+                                     "be None.")
+                x_slice = _as_float_array(x_slice, check_finite)
+                t = np.r_[x_slice, x_slice[-1]]
+                c = np.asarray(y_slice)
+                c = np.rollaxis(c, axis)
+                c = np.ascontiguousarray(c, dtype=_get_dtype(c.dtype))
+                return BSpline.construct_fast(t, c, k, axis=axis)
+
+            # special-case k=1 (e.g., Lyche and Morken, Eq.(2.16))
+            if k == 1 and t is None:
+                if not (deriv_l is None and deriv_r is None):
+                    raise ValueError("Too much info for k=1: bc_type can only be None.")
+                x_slice = _as_float_array(x_slice, check_finite)
+                t = np.r_[x_slice[0], x_slice, x_slice[-1]]
+                c = np.asarray(y_slice)
+                c = np.rollaxis(c, axis)
+                c = np.ascontiguousarray(c, dtype=_get_dtype(c.dtype))
+                return BSpline.construct_fast(t, c, k, axis=axis)
+
+            x_slice = _as_float_array(x_slice, check_finite)
+            y_slice = _as_float_array(y_slice, check_finite)
+            k = operator.index(k)
+
+            # come up with a sensible knot vector, if needed
+            if t is None:
+                if deriv_l is None and deriv_r is None:
+                    if k == 2:
+                        # OK, it's a bit ad hoc: Greville sites + omit
+                        # 2nd and 2nd-to-last points, a la not-a-knot
+                        t = (x_slice[1:] + x_slice[:-1]) / 2.
+                        t = np.r_[(x_slice[0],)*(k+1),
+                                   t[1:-1],
+                                   (x_slice[-1],)*(k+1)]
+                    else:
+                        t = _not_a_knot(x_slice, k)
+                else:
+                    t = _augknt(x_slice, k)
+
+            t = _as_float_array(t, check_finite)
+
+            y_slice = np.rollaxis(y_slice, axis)    # now internally interp axis is zero
+
+            if x_slice.ndim != 1 or np.any(x_slice[1:] <= x_slice[:-1]):
+                raise ValueError("Expect x_slice to be a 1-D sorted array_like.")
+            if k < 0:
+                raise ValueError("Expect non-negative k.")
+            if t.ndim != 1 or np.any(t[1:] < t[:-1]):
+                raise ValueError("Expect t to be a 1-D sorted array_like.")
+            if x_slice.size != y_slice.shape[0]:
+                raise ValueError('x_slice and y_slice are incompatible.')
+            if t.size < x_slice.size + k + 1:
+                raise ValueError('Got %d knots, need at least %d.' %
+                                 (t.size, x_slice.size + k + 1))
+            if (x_slice[0] < t[k]) or (x_slice[-1] > t[-k]):
+                raise ValueError('Out of bounds w/ x_slice = %s.' % x_slice)
+
+            # Here : deriv_l, r = [(nu, value), ...]
+            deriv_l = _convert_string_aliases(deriv_l, y_slice.shape[1:])
+            deriv_l_ords, deriv_l_vals = _process_deriv_spec(deriv_l)
+            nleft = deriv_l_ords.shape[0]
+
+            deriv_r = _convert_string_aliases(deriv_r, y_slice.shape[1:])
+            deriv_r_ords, deriv_r_vals = _process_deriv_spec(deriv_r)
+            nright = deriv_r_ords.shape[0]
+
+            # have `n` conditions for `nt` coefficients; need nt-n derivatives
+            n = x_slice.size
+            nt = t.size - k - 1
+
+            if nt - n != nleft + nright:
+                raise ValueError("The number of derivatives at boundaries does not "
+                                 "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
+
+            # set up the LHS: the collocation matrix + derivatives at boundaries
+            kl = ku = k
+            ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
+            _bspl._colloc(x_slice, t, k, ab, offset=nleft)
+            if nleft > 0:
+                _bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+            if nright > 0:
+                _bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+                                        offset=nt-nright)
+
+            # set up the RHS: values to interpolate (+ derivative values, if any)
+            extradim = prod(y_slice.shape[1:])
+            rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
+            if nleft > 0:
+                rhs[:nleft] = deriv_l_vals.reshape(-1, extradim)
+            rhs[nleft:nt - nright] = y_slice.reshape(-1, extradim)
+            if nright > 0:
+                rhs[nt - nright:] = deriv_r_vals.reshape(-1, extradim)
+
+            # solve Ab @ x_slice = rhs; this is the relevant part of linalg.solve_banded
+            if check_finite:
+                ab, rhs = map(np.asarray_chkfinite, (ab, rhs))
+            gbsv, = get_lapack_funcs(('gbsv',), (ab, rhs))
+            lu, piv, c, info = gbsv(kl, ku, ab, rhs,
+                    overwrite_ab=True, overwrite_b=True)
+
+            if info > 0:
+                raise LinAlgError("Collocation matix is singular.")
+            elif info < 0:
+                raise ValueError('illegal value in %d-th argument of internal gbsv' % -info)
+
+            c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
+
+            #=======================================
+            # START FROM SCIPY
+            #=======================================
+
+            coefficients[coeff_line_sel] = c.T
+        knots.append(t)
     return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs >= 0))
