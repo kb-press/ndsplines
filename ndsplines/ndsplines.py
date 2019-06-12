@@ -1,5 +1,12 @@
 import numpy as np
-from scipy import interpolate
+
+import operator
+from scipy._lib.six import string_types
+from scipy.linalg import (get_lapack_funcs, LinAlgError,
+                          cholesky_banded, cho_solve_banded)
+from scipy.interpolate._bsplines import (_as_float_array, _get_dtype, _augknt, 
+    _convert_string_aliases, _process_deriv_spec, _bspl as _sci_bspl, prod, 
+    _not_a_knot)
 
 from ndsplines import _npy_bspl
 
@@ -13,10 +20,7 @@ else:
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline', 'default_implementation']
 
-import operator
-from scipy._lib.six import string_types
-from scipy.linalg import (get_lapack_funcs, LinAlgError,
-                          cholesky_banded, cho_solve_banded)
+
 
 """
 TODOs:
@@ -216,9 +220,6 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     return temp_spline
 
 
-from scipy.interpolate._bsplines import _as_float_array, _get_dtype, _augknt, _convert_string_aliases, _process_deriv_spec, _bspl, prod, _not_a_knot
-
-
 def make_interp_spline(x, y, bcs=0, orders=3):
     """
     Construct an interpolating B-spline.
@@ -288,6 +289,8 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         bc_type=(bc_map[(bcs[i-1,0])],
                  bc_map[(bcs[i-1,1])])
 
+        t = None
+
         #=======================================
         # START FROM SCIPY
         #=======================================
@@ -300,9 +303,43 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 deriv_l, deriv_r = bc_type
             except TypeError:
                 raise ValueError("Unknown boundary condition: %s" % bc_type)
+
+        if k == 0:
+            if any(_ is not None for _ in (t, deriv_l, deriv_r)):
+                raise ValueError("Too much info for k=0: t and bc_type can only "
+                                 "be None.")
+            x_slice = _as_float_array(x_slice, check_finite)
+            t = np.r_[x_slice, x_slice[-1]]
+
+        if k == 1 and t is None:
+            if not (deriv_l is None and deriv_r is None):
+                raise ValueError("Too much info for k=1: bc_type can only be None.")
+            x_slice = _as_float_array(x_slice, check_finite)
+            t = np.r_[x_slice[0], x_slice, x_slice[-1]]
+
+        # come up with a sensible knot vector, if needed
+        if t is None:
+            if deriv_l is None and deriv_r is None:
+                if k == 2:
+                    # OK, it's a bit ad hoc: Greville sites + omit
+                    # 2nd and 2nd-to-last points, a la not-a-knot
+                    t = (x_slice[1:] + x_slice[:-1]) / 2.
+                    t = np.r_[(x_slice[0],)*(k+1),
+                               t[1:-1],
+                               (x_slice[-1],)*(k+1)]
+                else:
+                    t = _not_a_knot(x_slice, k)
+            else:
+                t = _augknt(x_slice, k)
+
+        t = _as_float_array(t, check_finite)
+
         #=======================================
         # END FROM SCIPY
         #=======================================
+
+
+
 
         for idx in np.ndindex(*all_other_ax_shape):
             offset_axes_remaining_sel = (tuple(idx[i-1:] + 
@@ -315,62 +352,29 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
             y_slice = coefficients[y_line_sel].T
 
-            t = None
+
 
             #=======================================
             # START FROM SCIPY
             #=======================================
-
-            if not -y_slice.ndim <= axis < y_slice.ndim:
-                raise ValueError("axis {} is out of bounds".format(axis))
-            if axis < 0:
-                axis += y_slice.ndim
 
             # special-case k=0 right away
             if k == 0:
                 if any(_ is not None for _ in (t, deriv_l, deriv_r)):
                     raise ValueError("Too much info for k=0: t and bc_type can only "
                                      "be None.")
-                x_slice = _as_float_array(x_slice, check_finite)
-                t = np.r_[x_slice, x_slice[-1]]
                 c = np.asarray(y_slice)
-                c = np.rollaxis(c, axis)
-                c = np.ascontiguousarray(c, dtype=_get_dtype(c.dtype))
-                return BSpline.construct_fast(t, c, k, axis=axis)
 
             # special-case k=1 (e.g., Lyche and Morken, Eq.(2.16))
             if k == 1 and t is None:
                 if not (deriv_l is None and deriv_r is None):
                     raise ValueError("Too much info for k=1: bc_type can only be None.")
-                x_slice = _as_float_array(x_slice, check_finite)
-                t = np.r_[x_slice[0], x_slice, x_slice[-1]]
                 c = np.asarray(y_slice)
-                c = np.rollaxis(c, axis)
-                c = np.ascontiguousarray(c, dtype=_get_dtype(c.dtype))
-                return BSpline.construct_fast(t, c, k, axis=axis)
 
             x_slice = _as_float_array(x_slice, check_finite)
             y_slice = _as_float_array(y_slice, check_finite)
             k = operator.index(k)
 
-            # come up with a sensible knot vector, if needed
-            if t is None:
-                if deriv_l is None and deriv_r is None:
-                    if k == 2:
-                        # OK, it's a bit ad hoc: Greville sites + omit
-                        # 2nd and 2nd-to-last points, a la not-a-knot
-                        t = (x_slice[1:] + x_slice[:-1]) / 2.
-                        t = np.r_[(x_slice[0],)*(k+1),
-                                   t[1:-1],
-                                   (x_slice[-1],)*(k+1)]
-                    else:
-                        t = _not_a_knot(x_slice, k)
-                else:
-                    t = _augknt(x_slice, k)
-
-            t = _as_float_array(t, check_finite)
-
-            y_slice = np.rollaxis(y_slice, axis)    # now internally interp axis is zero
 
             if x_slice.ndim != 1 or np.any(x_slice[1:] <= x_slice[:-1]):
                 raise ValueError("Expect x_slice to be a 1-D sorted array_like.")
@@ -403,14 +407,15 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 raise ValueError("The number of derivatives at boundaries does not "
                                  "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
 
+
             # set up the LHS: the collocation matrix + derivatives at boundaries
             kl = ku = k
             ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
-            _bspl._colloc(x_slice, t, k, ab, offset=nleft)
+            _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
             if nleft > 0:
-                _bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+                _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
             if nright > 0:
-                _bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+                _sci_bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
                                         offset=nt-nright)
 
             # set up the RHS: values to interpolate (+ derivative values, if any)
