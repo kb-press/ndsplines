@@ -29,9 +29,6 @@ TODOs:
 create wrapper with callback to allow for creating anti-derivative splines, etc
 (use 1D operations that can be iterated over )
 
-break out some of the knot normalization stuff (in interpolate.make_interp_spline)
-to make it easier to make lsq splines? would also be useful for making the
-make_interp_spline more efficient
 
 make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfile?
 
@@ -338,7 +335,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         # END FROM SCIPY
         #=======================================
 
-
+        knots.append(t)
 
 
         for idx in np.ndindex(*all_other_ax_shape):
@@ -446,7 +443,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             #=======================================
 
             coefficients[coeff_line_sel] = c.T
-        knots.append(t)
     return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs >= 0))
