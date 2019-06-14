@@ -18,7 +18,7 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
 
     Returns
     -------
-    ell : ndarray, shape=(s,) dtype=np.int_
+    ell : ndarray, shape=(s,) dtype=np.intc
         Suitable interval or -1 for each value in x
 
     Notes
@@ -32,16 +32,16 @@ def find_intervals(t, k, x, extrapolate=False, workspace=None):
 
     do_return = False
     if (not isinstance(workspace, np.ndarray) or 
-            (workspace.dtype != np.int_) or
+            (workspace.dtype != np.intc) or
             (workspace.shape[0] < t.shape[0]) or
             (workspace.shape[1] < s)):
-        workspace = np.empty((t.shape[0], s), dtype=np.int_)
+        workspace = np.empty((t.shape[0], s), dtype=np.intc)
         do_return = True
     
     ell = workspace[0,:s]
 
     # TODO: I am assuming memory is cheap and I don't get much for typing
-    # the test array as bool_ vs int_
+    # the test array as bool_ vs intc
     test = workspace[1:t.shape[0],:s]
 
     ell[:] = -1
@@ -73,7 +73,7 @@ def evaluate_spline(t, k, x, nu=0, extrapolate=False,
         order of B-spline.
     x : ndarray, shape=(s,) dtype=np.float_
         values to find the interval for
-    ell : ndarray, shape=(s,) dtype=np.int_
+    ell : ndarray, shape=(s,) dtype=np.intc
         index such that t[ell] <= x < t[ell+1] for each x
     nu : int
         order of derivative to evaluate.
@@ -94,7 +94,7 @@ def evaluate_spline(t, k, x, nu=0, extrapolate=False,
     s = x.size
 
     if (not isinstance(interval_workspace, np.ndarray) or 
-            (interval_workspace.dtype != np.int_) or
+            (interval_workspace.dtype != np.intc) or
             (interval_workspace.shape[0] < s)):
         raise ValueError("interval_workspace has invalid shape or dtype")
     ell = find_intervals(t, k, x, extrapolate)
