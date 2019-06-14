@@ -21,18 +21,16 @@ extname = '_bspl'
 if use_cython and use_numpy:
     extensions = cythonize([
         Extension("{}.{}".format(name, extname),
-                  [os.path.join(name, "{}.pyx".format(extname)),
-                   os.path.join(name, "{}.h".format(extname)),
-                  ],
-                  include_dirs=[numpy.get_include(),],
+                  [os.path.join(name, "{}.pyx".format(extname))],
+                  include_dirs=[numpy.get_include()],
                   depends=[os.path.join(name, "{}.h".format(extname))]),
     ])
 
 elif use_numpy:
     extensions = [
         Extension("{}.{}".format(name, extname),
-                  [os.path.join(name, "{}.c".format(extname)),],
-                  include_dirs=[numpy.get_include(),],
+                  [os.path.join(name, "{}.c".format(extname))],
+                  include_dirs=[numpy.get_include()],
                   depends=[os.path.join(name, "{}.h".format(extname)),],
                   optional=True)
     ]
