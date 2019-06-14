@@ -28,6 +28,7 @@ steps:
 
 - script: |
     pip install pytest pytest-azurepipelines
-    pip install .
+    python setup.py build
+    python setup.py install
     pytest -sv
   displayName: 'Test'
