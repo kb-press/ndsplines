@@ -7,7 +7,6 @@ from .ndsplines import *
 
 def set_impl(name):
     """Set bspl implementation to either cython or numpy."""
-    global ndsplines
     if name == 'cython':
         try:
             from . import _bspl
