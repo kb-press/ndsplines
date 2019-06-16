@@ -1,6 +1,9 @@
 trigger:
 - master
 
+pr:
+- master
+
 strategy:
   matrix:
     Linux_Py36:
