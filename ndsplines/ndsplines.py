@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import interpolate
+from ndsplines import _npy_bspl
 
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline', 'impl']
@@ -27,7 +28,7 @@ periodic = -1
 
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
-impl = None
+impl = _npy_bspl
 
 
 class BSplineNDInterpolator(object):
