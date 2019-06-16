@@ -17,7 +17,7 @@ except ImportError:
 else:
     default_implementation = _bspl
 
-__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
+__all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline', 'default_implementation']
 
 
@@ -34,12 +34,10 @@ make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfil
 
 
 """
-pinned = 2
-clamped = 1
-extrap = 0
-periodic = -1
+clamped = np.array([1,0.0])
+pinned = np.array([2,0.0])
+notaknot = np.array([0,0.0])
 
-bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
 class BSplineNDInterpolator(object):
@@ -265,9 +263,11 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     ydim = y.shape[0]
     # generally, x.shape = (xdim, n1, n2, ..., n_xdim)
     # and y.sahpe = (ydim, n1, n2, ..., n_xdim)
-    bcs = np.broadcast_to(bcs, (xdim,2))
     orders = np.broadcast_to(orders, (xdim,))
-    deriv_specs = np.asarray((bcs[:,:]>0),dtype=np.int)
+
+    bcs = np.broadcast_to(bcs, (xdim,2,2))
+    deriv_specs = np.asarray((bcs[:,:,0]>0),dtype=np.int)
+    nak_spec = np.asarray((bcs[:,:,0]==0),dtype=np.bool)
 
     knots = []
     coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
@@ -283,23 +283,11 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         x_slice = x[x_line_sel]
         k = orders[i-1]
 
-        bc_type=(bc_map[(bcs[i-1,0])],
-                 bc_map[(bcs[i-1,1])])
-
         t = None
 
         #=======================================
         # START FROM SCIPY
         #=======================================
-        if bc_type is None or bc_type == 'not-a-knot':
-            deriv_l, deriv_r = None, None
-        elif isinstance(bc_type, string_types):
-            deriv_l, deriv_r = bc_type, bc_type
-        else:
-            try:
-                deriv_l, deriv_r = bc_type
-            except TypeError:
-                raise ValueError("Unknown boundary condition: %s" % bc_type)
 
         if k == 0:
             if any(_ is not None for _ in (t, deriv_l, deriv_r)):
@@ -316,7 +304,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
         # come up with a sensible knot vector, if needed
         if t is None:
-            if deriv_l is None and deriv_r is None:
+            if np.all(nak_spec[i-1, :]):
                 if k == 2:
                     # OK, it's a bit ad hoc: Greville sites + omit
                     # 2nd and 2nd-to-last points, a la not-a-knot
@@ -330,6 +318,45 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 t = _augknt(x_slice, k)
 
         t = _as_float_array(t, check_finite)
+
+        # Here : deriv_l, r = [(nu, value), ...]
+        deriv_l_ords, deriv_r_ords = bcs[i-1, :, 0].astype(np.int_)
+    
+        if deriv_l_ords == 0:
+            deriv_l_ords = np.array([])
+            deriv_l_vals = np.array([])
+            nleft = 0
+        else:
+            deriv_l_ords = np.array([deriv_l_ords])
+            deriv_l_vals = np.broadcast_to(bcs[i-1, 0, 1], ydim)
+            nleft = 1
+
+        if deriv_r_ords == 0:
+            deriv_r_ords = np.array([])
+            deriv_r_vals = np.array([])
+            nright = 0
+        else:
+            deriv_r_ords = np.array([deriv_r_ords])
+            deriv_r_vals = np.broadcast_to(bcs[i-1, 1, 1], ydim)
+            nright = 1
+
+        # have `n` conditions for `nt` coefficients; need nt-n derivatives
+        n = x_slice.size
+        nt = t.size - k - 1
+
+        if nt - n != nleft + nright:
+            raise ValueError("The number of derivatives at boundaries does not "
+                             "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
+
+        # set up the LHS: the collocation matrix + derivatives at boundaries
+        kl = ku = k
+        ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
+        _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
+        if nleft > 0:
+            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+        if nright > 0:
+            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+                                    offset=nt-nright)
 
         #=======================================
         # END FROM SCIPY
@@ -387,34 +414,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             if (x_slice[0] < t[k]) or (x_slice[-1] > t[-k]):
                 raise ValueError('Out of bounds w/ x_slice = %s.' % x_slice)
 
-            # Here : deriv_l, r = [(nu, value), ...]
-            deriv_l = _convert_string_aliases(deriv_l, y_slice.shape[1:])
-            deriv_l_ords, deriv_l_vals = _process_deriv_spec(deriv_l)
-            nleft = deriv_l_ords.shape[0]
-
-            deriv_r = _convert_string_aliases(deriv_r, y_slice.shape[1:])
-            deriv_r_ords, deriv_r_vals = _process_deriv_spec(deriv_r)
-            nright = deriv_r_ords.shape[0]
-
-            # have `n` conditions for `nt` coefficients; need nt-n derivatives
-            n = x_slice.size
-            nt = t.size - k - 1
-
-            if nt - n != nleft + nright:
-                raise ValueError("The number of derivatives at boundaries does not "
-                                 "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
-
-
-            # set up the LHS: the collocation matrix + derivatives at boundaries
-            kl = ku = k
-            ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
-            _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
-            if nleft > 0:
-                _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
-            if nright > 0:
-                _sci_bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
-                                        offset=nt-nright)
-
             # set up the RHS: values to interpolate (+ derivative values, if any)
             extradim = prod(y_slice.shape[1:])
             rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
@@ -443,6 +442,4 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             #=======================================
 
             coefficients[coeff_line_sel] = c.T
-    return BSplineNDInterpolator(knots, coefficients, orders, 
-        np.all(bcs==periodic, axis=1),
-        (bcs >= 0))
+    return BSplineNDInterpolator(knots, coefficients, orders,)
