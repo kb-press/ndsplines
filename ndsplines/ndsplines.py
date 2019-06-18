@@ -114,6 +114,7 @@ class BSplineNDInterpolator(object):
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.intc)
             self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc) 
+
     def __call__(self, x, nus=0):
         """
         Parameters
