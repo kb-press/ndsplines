@@ -300,15 +300,16 @@ else:
     # TODO: add demo
 
     def make_interp_spline_from_table(df, input_vars, output_vars, bcs=0, orders=3):
-        input_vars = np.array(input_vars)
-        output_vars = np.array(output_vars)
-        all_columns = np.r_[input_vars, output_vars]
-        sorted_df = df.sort_values(input_vars)[all_columns].copy()
+        input_vars = list(input_vars)
+        output_vars = list(output_vars)
+        sorted_df = df.sort_values(input_vars)[input_vars + output_vars].copy()
         meshgrid_data = np.moveaxis(sorted_df.values.reshape(
-                tuple(sorted_df[input_vars].nunique()) + (sort_values.shape[1],)
+                tuple(sorted_df[input_vars].nunique()) + (sorted_df.shape[1],)
             ), -1, 0)
 
-        xdata = meshgrid_data[:input_vars.size, ...]
-        ydata = meshgrid_data[input_vars.size:, ...]
+        xdata = meshgrid_data[:len(input_vars), ...]
+        ydata = meshgrid_data[len(input_vars):, ...]
         return make_interp_spline(xdata, ydata, bcs, orders)
+
+    __all__ += ['make_interp_spline_from_table',]
 
