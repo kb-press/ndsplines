@@ -1,17 +1,10 @@
 import numpy as np
 from scipy import interpolate
-
 from ndsplines import _npy_bspl
 
-try:
-    from ndsplines import _bspl
-except ImportError:
-    default_implementation = _npy_bspl
-else:
-    default_implementation = _bspl
-
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline', 'default_implementation']
+           'make_interp_spline', 'make_lsq_spline']
+
 
 """
 TODOs:
@@ -43,12 +36,14 @@ class BSplineNDInterpolator(object):
     knots : list of ndarrays,
         shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
     coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
-    orders : ndarray, shape=(ndim,), dtype=np.int_
+    orders : ndarray, shape=(ndim,), dtype=np.intc
     periodic : ndarray, shape=(ndim,), dtype=np.bool_
     extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
     """
-    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True, implementation=default_implementation):
-        self.implementation = implementation
+
+    impl = _npy_bspl
+
+    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
         self.coefficients = coefficients
         self.ndim = len(knots) # dimension of knots
@@ -75,7 +70,7 @@ class BSplineNDInterpolator(object):
         Parameters
         ----------
         x : ndarray, shape=(self.ndim, s) dtype=np.float_
-        nus : int or ndarray, shape=(self.ndim,) dtype=np.int_
+        nus : int or ndarray, shape=(self.ndim,) dtype=np.intc
         """
         num_points = x.shape[-1]
 
@@ -101,7 +96,7 @@ class BSplineNDInterpolator(object):
                 extrapolate_flag = True
 
 
-            self.implementation.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            self.impl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
                 self.interval_workspace[i][:num_points], 
@@ -118,15 +113,14 @@ class BSplineNDInterpolator(object):
                 2*np.max(self.orders)+3
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.intc)
-            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
-
+            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc) 
     def __call__(self, x, nus=0):
         """
         Parameters
         ----------
         x : ndarray, shape=(self.ndim, ...) dtype=np.float_
             Point(s) to evaluate spline on. Output will be (self.mdim,...)
-        nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.int_
+        nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.intc
             Order of derivative(s) for each dimension to evaluate
             
         """
@@ -163,7 +157,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
         Ordinates.
     knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_ndim, + orders[-1] + 1)
         Knots and data points must satisfy Schoenberg-Whitney conditions.
-    orders : ndarray, shape=(ndim,), dtype=np.int_
+    orders : ndarray, shape=(ndim,), dtype=np.intc
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
@@ -222,7 +216,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     y : array_like, shape (mdim, n_1, n_2, ..., n_ndim)
         Ordinates.
     bcs : (list of) 2-tuples or None
-    orders : ndarray, shape=(ndim,), dtype=np.int_
+    orders : ndarray, shape=(ndim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable)
     periodic : ndarray, shape=(ndim,), dtype=np.bool_
     extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
