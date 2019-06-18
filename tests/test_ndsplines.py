@@ -12,3 +12,13 @@ def test_highlevel(impl):
     y = np.sin(2*np.pi*5*x)
     spl = ndsplines.make_interp_spline(x, y)
     spl(xx)
+
+
+def test_evaluate_spline_different_impls():
+    ndsplines.set_impl('numpy')
+    f_numpy = ndsplines.evaluate_spline
+
+    ndsplines.set_impl('cython')
+    f_cython = ndsplines.evaluate_spline
+
+    assert f_numpy is not f_cython

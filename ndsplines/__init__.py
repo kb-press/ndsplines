@@ -3,8 +3,8 @@ from .ndsplines import *
 evaluate_spline = None
 
 def set_impl(name):
-    global evaluate_spline
     """Set bspl implementation to either cython or numpy."""
+    global evaluate_spline
     if name == 'cython':
         try:
             from . import _bspl
