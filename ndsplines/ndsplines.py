@@ -1,5 +1,4 @@
 import numpy as np
-
 import operator
 from scipy._lib.six import string_types
 from scipy.linalg import (get_lapack_funcs, LinAlgError,
@@ -9,15 +8,8 @@ from scipy.interpolate._bsplines import (_as_float_array, _bspl as _sci_bspl,
 
 from ndsplines import _npy_bspl
 
-try:
-    from ndsplines import _bspl
-except ImportError:
-    default_implementation = _npy_bspl
-else:
-    default_implementation = _bspl
-
 __all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline', 'default_implementation']
+           'make_interp_spline', 'make_lsq_spline',]
 
 
 
@@ -50,8 +42,10 @@ class BSplineNDInterpolator(object):
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
     """
-    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True, implementation=default_implementation):
-        self.implementation = implementation
+
+    impl = _npy_bspl
+
+    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
         self.coefficients = coefficients
         self.xdim = len(knots) # dimension of knots
@@ -104,7 +98,7 @@ class BSplineNDInterpolator(object):
                 extrapolate_flag = True
 
 
-            self.implementation.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            self.impl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
                 self.interval_workspace[i][:num_points], 
@@ -121,7 +115,7 @@ class BSplineNDInterpolator(object):
                 2*np.max(self.orders)+3
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
-            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.int_)
+            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc)
 
     def __call__(self, x, nus=0):
         """
@@ -250,7 +244,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         Use deriv_spec == 0 for not-a-knot boundary condition
         For k=0, both spec_values = 0 implements nearest-neighbor,
         a single side with spec_value = 0 uses zero-order-hold from that direction
-    orders : ndarray, shape=(xdim,), dtype=np.int_
+    orders : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable)
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,), dtype=np.bool_

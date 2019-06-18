@@ -2,3 +2,4 @@
 matplotlib
 sphinx
 sphinx_gallery
+pytest
