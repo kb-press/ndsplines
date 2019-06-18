@@ -455,7 +455,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                     ab, rhs = map(np.asarray_chkfinite, (ab, rhs))
                 gbsv, = get_lapack_funcs(('gbsv',), (ab, rhs))
                 lu, piv, c, info = gbsv(kl, ku, ab, rhs,
-                        overwrite_ab=True, overwrite_b=True)
+                        overwrite_ab=False, overwrite_b=True)
 
                 if info > 0:
                     raise LinAlgError("Collocation matix is singular.")
