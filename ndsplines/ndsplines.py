@@ -337,7 +337,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 t = np.r_[x_slice[0], (x_slice[:-1] + x_slice[1:])/2., x_slice[-1]]
             elif not left_zero and right_zero:
                 t = np.r_[x_slice, x_slice[-1]]
-            elif left_zero == 0 and not right_zero:
+            elif left_zero and not right_zero:
                 t = np.r_[x_slice[0], x_slice]
             else:
                 raise ValueError("Set deriv_spec = 0, with up to one side = -1 for k=0")
@@ -377,7 +377,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         t = _as_float_array(t, check_finite)
         
     
-        if deriv_l_ords == 0:
+        if nak_spec[i-1,0]:
             deriv_l_ords = np.array([])
             deriv_l_vals = np.array([])
             nleft = 0
@@ -386,7 +386,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             deriv_l_vals = np.broadcast_to(bcs[i-1, 0, 1], ydim)
             nleft = 1
 
-        if deriv_r_ords == 0:
+        if nak_spec[i-1,1]:
             deriv_r_ords = np.array([])
             deriv_r_vals = np.array([])
             nright = 0
@@ -425,7 +425,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             offset_axes_remaining_sel = (tuple(idx[i-1:] + 
                 deriv_specs[i:,0]))
             y_line_sel = ((Ellipsis,) + idx[:i-1] + 
-                (slice(deriv_specs[i-1,0],-deriv_specs[i-1,0] or None),) +
+                (slice(deriv_specs[i-1,0],-deriv_specs[i-1,1] or None),) +
                 offset_axes_remaining_sel)
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
