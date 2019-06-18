@@ -3,7 +3,7 @@ from scipy import interpolate
 from ndsplines import _npy_bspl
 
 __all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline', 'impl']
+           'make_interp_spline', 'make_lsq_spline']
 
 
 """
@@ -28,8 +28,6 @@ periodic = -1
 
 bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
-impl = _npy_bspl
-
 
 class BSplineNDInterpolator(object):
     """
@@ -42,6 +40,9 @@ class BSplineNDInterpolator(object):
     periodic : ndarray, shape=(ndim,), dtype=np.bool_
     extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
     """
+
+    impl = _npy_bspl
+
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
         self.coefficients = coefficients
@@ -95,7 +96,7 @@ class BSplineNDInterpolator(object):
                 extrapolate_flag = True
 
 
-            impl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            self.impl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][..., None],
                 self.interval_workspace[i][:num_points], 
