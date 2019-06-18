@@ -214,6 +214,27 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     temp_spline.observation_matrix = observation_matrix
     return temp_spline
 
+def _not_a_knot(x, k, left=True, right=True):
+    if k > 2 and k % 2 == 0:
+        raise ValueError("Odd degree for now only. Got %s." % k)
+    if k==0: # special case for k = 0, only apply to right
+        left = False
+    t = x
+    if left:
+        t = np.r_[(t[0],)*(k+1), t[(k -1) //2 +1:]]
+    if right:
+        t = np.r_[t[:-(k-1)//2 -1 or None], (t[-1],)*(k+1)]
+    return t
+
+def _augknt(x, k, left=True, right=True):
+    t = x
+    if left:
+        t = np.r_[(t[0],)*k, t]
+    if right:
+        t = np.r_[t, (t[-1],)*k]
+    return t
+
+
 
 def make_interp_spline(x, y, bcs=0, orders=3):
     """
@@ -226,6 +247,10 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     y : array_like, 
         Ordinates. shape (ydim, n_1, n_2, ..., n_xdim)
     bcs : (list of) 2-tuples or None
+        2-tuple defines for each side a 2-tuple of (deriv_spec, spec_value)
+        Use deriv_spec == 0 for not-a-knot boundary condition
+        For k=0, both spec_values = 0 implements nearest-neighbor,
+        a single side with spec_value = 0 uses zero-order-hold from that direction
     orders : ndarray, shape=(xdim,), dtype=np.int_
         Degree of interpolant for each axis (or broadcastable)
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
@@ -233,9 +258,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
     Notes
     -----
-    TODO: use scipy source to implement this more efficiently?
-    i.e., do knot computation once for each dimension, then coefficients for
-    each line 
+    Special case boundary condition - for k=0, 
     """
     if isinstance(x, np.ndarray): # mesh
         if x.ndim == 1:
@@ -267,7 +290,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
     bcs = np.broadcast_to(bcs, (xdim,2,2))
     deriv_specs = np.asarray((bcs[:,:,0]>0),dtype=np.int)
-    nak_spec = np.asarray((bcs[:,:,0]==0),dtype=np.bool)
+    nak_spec = np.asarray((bcs[:,:,0]<=0),dtype=np.bool)
 
     knots = []
     coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
@@ -283,44 +306,76 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         x_slice = x[x_line_sel]
         k = orders[i-1]
 
+        left_nak, right_nak = nak_spec[i-1, :]
+        both_nak = left_nak and right_nak
+
+        # Here : deriv_l, r = [(nu, value), ...]
+        deriv_l_ords, deriv_r_ords = bcs[i-1, :, 0].astype(np.int_)
+
         t = None
 
         #=======================================
         # START FROM SCIPY
         #=======================================
 
+        # should there be a general check for k <= deriv_spec ?
+
         if k == 0:
-            if any(_ is not None for _ in (t, deriv_l, deriv_r)):
+            # all derivatives are fully defined, can only set 0-th derivative,
+            # aka not-a-knot boundary conditions to both sides
+            if not both_nak:
                 raise ValueError("Too much info for k=0: t and bc_type can only "
-                                 "be None.")
+                                 "be notaknot.")
             x_slice = _as_float_array(x_slice, check_finite)
-            t = np.r_[x_slice, x_slice[-1]]
 
-        if k == 1 and t is None:
-            if not (deriv_l is None and deriv_r is None):
-                raise ValueError("Too much info for k=1: bc_type can only be None.")
-            x_slice = _as_float_array(x_slice, check_finite)
-            t = np.r_[x_slice[0], x_slice, x_slice[-1]]
+            # not the same as not a knot... _not_a_knot would apply to both ends,
+            # this only applies to right. added as special case to 1-sided
+            # _not_a_knot implementation.
+            left_zero, right_zero = (bcs[i-1, :, 1]==0)
 
-        # come up with a sensible knot vector, if needed
-        if t is None:
-            if np.all(nak_spec[i-1, :]):
-                if k == 2:
-                    # OK, it's a bit ad hoc: Greville sites + omit
-                    # 2nd and 2nd-to-last points, a la not-a-knot
-                    t = (x_slice[1:] + x_slice[:-1]) / 2.
-                    t = np.r_[(x_slice[0],)*(k+1),
-                               t[1:-1],
-                               (x_slice[-1],)*(k+1)]
-                else:
-                    t = _not_a_knot(x_slice, k)
+            if left_zero and right_zero:
+                t = np.r_[x_slice[0], (x_slice[:-1] + x_slice[1:])/2., x_slice[-1]]
+            elif not left_zero and right_zero:
+                t = np.r_[x_slice, x_slice[-1]]
+            elif left_zero == 0 and not right_zero:
+                t = np.r_[x_slice[0], x_slice]
             else:
-                t = _augknt(x_slice, k)
+                raise ValueError("Set deriv_spec = 0, with up to one side = -1 for k=0")
+            
+
+            # actually, I suspect which side it is applied to determines
+            # whether it is causal or anti-causal zero-order hold.
+            # greville sites + x[0], x[-1] may give nearest neighbor?
+
+        if k == 1:
+            # all derivatives are fully defined, can only set 0-th derivative,
+            # aka not-a-knot boundary conditions to both sides
+            if not both_nak:
+                raise ValueError("Too much info for k=1: bc_type can only be notaknot.")
+            x_slice = _as_float_array(x_slice, check_finite)
+            # apply _not_a_knot
+
+        if k==2:
+
+            if both_nak:
+                # special, ad-hoc case using greville sites
+                t = (x_slice[1:] + x_slice[:-1]) / 2.
+                t = np.r_[(x_slice[0],)*(k+1),
+                           t[1:-1],
+                           (x_slice[-1],)*(k+1)]
+
+            elif left_nak or right_nak:
+                raise ValueError("For k=2, can set both sides or neither side to notaknot")
+            else:
+                t = x_slice
+
+        elif k != 0:
+            t = _not_a_knot(x_slice, k, left_nak, right_nak)
+
+        t = _augknt(t, k, not left_nak, not right_nak)
 
         t = _as_float_array(t, check_finite)
-
-        # Here : deriv_l, r = [(nu, value), ...]
-        deriv_l_ords, deriv_r_ords = bcs[i-1, :, 0].astype(np.int_)
+        
     
         if deriv_l_ords == 0:
             deriv_l_ords = np.array([])
@@ -343,8 +398,9 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         # have `n` conditions for `nt` coefficients; need nt-n derivatives
         n = x_slice.size
         nt = t.size - k - 1
-
-        if nt - n != nleft + nright:
+        
+        # this also catches if deriv_spec > k-1, possibly?
+        if np.clip(nt - n, 0, np.inf).astype(int) != nleft + nright:
             raise ValueError("The number of derivatives at boundaries does not "
                              "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
 
@@ -384,58 +440,59 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
             # special-case k=0 right away
             if k == 0:
-                if any(_ is not None for _ in (t, deriv_l, deriv_r)):
+                if not both_nak:
                     raise ValueError("Too much info for k=0: t and bc_type can only "
-                                     "be None.")
+                                     "be notaknot.")
                 c = np.asarray(y_slice)
 
             # special-case k=1 (e.g., Lyche and Morken, Eq.(2.16))
-            if k == 1 and t is None:
-                if not (deriv_l is None and deriv_r is None):
+            elif k == 1:
+                if not both_nak:
                     raise ValueError("Too much info for k=1: bc_type can only be None.")
                 c = np.asarray(y_slice)
 
-            x_slice = _as_float_array(x_slice, check_finite)
-            y_slice = _as_float_array(y_slice, check_finite)
-            k = operator.index(k)
+            else:
+                x_slice = _as_float_array(x_slice, check_finite)
+                y_slice = _as_float_array(y_slice, check_finite)
+                k = operator.index(k)
 
 
-            if x_slice.ndim != 1 or np.any(x_slice[1:] <= x_slice[:-1]):
-                raise ValueError("Expect x_slice to be a 1-D sorted array_like.")
-            if k < 0:
-                raise ValueError("Expect non-negative k.")
-            if t.ndim != 1 or np.any(t[1:] < t[:-1]):
-                raise ValueError("Expect t to be a 1-D sorted array_like.")
-            if x_slice.size != y_slice.shape[0]:
-                raise ValueError('x_slice and y_slice are incompatible.')
-            if t.size < x_slice.size + k + 1:
-                raise ValueError('Got %d knots, need at least %d.' %
-                                 (t.size, x_slice.size + k + 1))
-            if (x_slice[0] < t[k]) or (x_slice[-1] > t[-k]):
-                raise ValueError('Out of bounds w/ x_slice = %s.' % x_slice)
+                if x_slice.ndim != 1 or np.any(x_slice[1:] <= x_slice[:-1]):
+                    raise ValueError("Expect x_slice to be a 1-D sorted array_like.")
+                if k < 0:
+                    raise ValueError("Expect non-negative k.")
+                if t.ndim != 1 or np.any(t[1:] < t[:-1]):
+                    raise ValueError("Expect t to be a 1-D sorted array_like.")
+                if x_slice.size != y_slice.shape[0]:
+                    raise ValueError('x_slice and y_slice are incompatible.')
+                if t.size < x_slice.size + k + 1:
+                    raise ValueError('Got %d knots, need at least %d.' %
+                                     (t.size, x_slice.size + k + 1))
+                if (x_slice[0] < t[k]) or (x_slice[-1] > t[-k]):
+                    raise ValueError('Out of bounds w/ x_slice = %s.' % x_slice)
 
-            # set up the RHS: values to interpolate (+ derivative values, if any)
-            extradim = prod(y_slice.shape[1:])
-            rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
-            if nleft > 0:
-                rhs[:nleft] = deriv_l_vals.reshape(-1, extradim)
-            rhs[nleft:nt - nright] = y_slice.reshape(-1, extradim)
-            if nright > 0:
-                rhs[nt - nright:] = deriv_r_vals.reshape(-1, extradim)
+                # set up the RHS: values to interpolate (+ derivative values, if any)
+                extradim = prod(y_slice.shape[1:])
+                rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
+                if nleft > 0:
+                    rhs[:nleft] = deriv_l_vals.reshape(-1, extradim)
+                rhs[nleft:nt - nright] = y_slice.reshape(-1, extradim)
+                if nright > 0:
+                    rhs[nt - nright:] = deriv_r_vals.reshape(-1, extradim)
 
-            # solve Ab @ x_slice = rhs; this is the relevant part of linalg.solve_banded
-            if check_finite:
-                ab, rhs = map(np.asarray_chkfinite, (ab, rhs))
-            gbsv, = get_lapack_funcs(('gbsv',), (ab, rhs))
-            lu, piv, c, info = gbsv(kl, ku, ab, rhs,
-                    overwrite_ab=True, overwrite_b=True)
+                # solve Ab @ x_slice = rhs; this is the relevant part of linalg.solve_banded
+                if check_finite:
+                    ab, rhs = map(np.asarray_chkfinite, (ab, rhs))
+                gbsv, = get_lapack_funcs(('gbsv',), (ab, rhs))
+                lu, piv, c, info = gbsv(kl, ku, ab, rhs,
+                        overwrite_ab=True, overwrite_b=True)
 
-            if info > 0:
-                raise LinAlgError("Collocation matix is singular.")
-            elif info < 0:
-                raise ValueError('illegal value in %d-th argument of internal gbsv' % -info)
+                if info > 0:
+                    raise LinAlgError("Collocation matix is singular.")
+                elif info < 0:
+                    raise ValueError('illegal value in %d-th argument of internal gbsv' % -info)
 
-            c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
+                c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
 
             #=======================================
             # START FROM SCIPY
