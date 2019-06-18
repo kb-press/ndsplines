@@ -55,9 +55,6 @@ ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)
 NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
 NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
 
-# test_bcs = (None, (None,None,), "not-a-knot", ("not-a-knot", "not-a-knot"),)
-
-
 for order in range(4):
     for func in funcs:
         fvals = func(x)
@@ -90,7 +87,7 @@ for order in range(4):
                 continue
             else:
                 NDsplienf = test_NDBspline(xx.copy())
-                plt.plot(xx, NDsplienf[0], label=', '.join(*tuple([NDspline_bc_to_string[tuple(bc)] for bc in test_bc])) + ' (ndspline)' )
+                plt.plot(xx, NDsplienf[0], label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
     
         
         plt.plot(xx, truef, 'k--', label="True " + func.__name__)
