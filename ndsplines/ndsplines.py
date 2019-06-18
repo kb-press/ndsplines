@@ -288,3 +288,27 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     return BSplineNDInterpolator(knots, coefficients, orders, 
         np.all(bcs==periodic, axis=1),
         (bcs >= 0))
+
+
+try:
+    import pandas as pd
+except ImportError:
+    pass
+else:
+    # TODO: add wrappers so that input_vars are used as kwargs to the spline?
+    # TODO: add wrapper to return table with input and output?
+    # TODO: add demo
+
+    def make_interp_spline_from_table(df, input_vars, output_vars, bcs=0, orders=3):
+        input_vars = np.array(input_vars)
+        output_vars = np.array(output_vars)
+        all_columns = np.r_[input_vars, output_vars]
+        sorted_df = df.sort_values(input_vars)[all_columns].copy()
+        meshgrid_data = np.moveaxis(sorted_df.values.reshape(
+                tuple(sorted_df[input_vars].nunique()) + (sort_values.shape[1],)
+            ), -1, 0)
+
+        xdata = meshgrid_data[:input_vars.size, ...]
+        ydata = meshgrid_data[input_vars.size:, ...]
+        return make_interp_spline(xdata, ydata, bcs, orders)
+
