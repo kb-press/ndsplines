@@ -200,7 +200,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
 
-    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T)
+    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T, rcond=None)
     temp_spline.coefficients = lsq_coefficients.T.reshape((ydim,) + knot_shapes )
 
     # TODO: I think people will want this matrix, is there a better way to give this to a user?
