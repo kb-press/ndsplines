@@ -14,7 +14,7 @@ import itertools
 import ndsplines
 
 def gaussian(x_in):
-    z = norm.ppf(.995)
+    z = norm.ppf(.9995)
     x = z*(2*x_in-1)
     return norm.pdf(x)
 
@@ -28,44 +28,72 @@ def tanh(x_in):
 
 funcs = [gaussian, sin, tanh]
 
-x = np.linspace(0, 1, 7)
+x = np.linspace(0, 1, 9)
 xx = np.linspace(-.25, 1.25, 1024)
 k = 3
 
 
-test_bcs = np.array(list(itertools.chain(
-    itertools.product(["natural", "clamped"], repeat=2),
+scipy_test_bcs = np.array(list(itertools.chain(
+    itertools.product(["natural", "clamped", ], repeat=2),
     ((None,None),),
 )))
 
-NDspline_dict = {"natural": ndsplines.pinned, "clamped": ndsplines.clamped, None: 0}
+k0_bcs = np.array(list(
+itertools.product([(0,0), (0,-1)], repeat=2)
+)[:-1])[[-1,0,1]]
 
-for func in funcs:
-    fvals = func(x)
-    truef = func(xx)
-    plt.figure()
+NDspline_dict = {"natural": ndsplines.pinned, "clamped": ndsplines.clamped, "not-a-knot": ndsplines.notaknot}
 
-    plot_sel = slice(None)
+ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)  for item in itertools.chain(
+    itertools.product(["natural", "clamped", ], repeat=2),
+    (("not-a-knot","not-a-knot"),),
+    itertools.product(["not-a-knot"],["natural", "clamped", ]),
+    itertools.product(["natural", "clamped", ], ["not-a-knot"]),
+)])
 
-    plt.gca().set_prop_cycle(None)
 
-    for test_bc in test_bcs[plot_sel,:]:
-        test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc))
+NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
+NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
+
+for order in range(3,4):
+    for func in funcs:
+        fvals = func(x)
+        truef = func(xx)
+        plt.figure()
+    
+        plot_sel = slice(None)
+    
+        plt.gca().set_prop_cycle(None)
+    
+        for test_bc in scipy_test_bcs[plot_sel,:]:
+            try:
+                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=order)
+            except ValueError:
+                continue
+            else:
+                splinef = test_Bspline(xx.copy(), extrapolate=True)
+                plt.plot(xx, splinef, '--', lw=3.0, label=str(test_bc) + ' (BSpline)')
+
+        plt.gca().set_prop_cycle(None)
         
-        splinef = test_Bspline(xx.copy(), extrapolate=True)
-        plt.plot(xx, splinef,'--', lw=3.0, label=str(test_bc) + ' (BSpline)')
-
-    plt.gca().set_prop_cycle(None)
-
-    for test_bc in test_bcs[plot_sel,:]:
-        test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=(NDspline_dict[test_bc[0]], NDspline_dict[test_bc[1]]))
-        NDsplienf = test_NDBspline(xx.copy())
-        plt.plot(xx, NDsplienf[0], label=str(test_bc) + ' (ndspline)' )
-
+        if order == 0:
+            bc_iter = k0_bcs
+        else:
+            bc_iter = ndsplines_test_bcs
+        for test_bc in bc_iter[plot_sel,:]:
+            try:
+                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
+            except ValueError:
+                continue
+            else:
+                NDsplienf = test_NDBspline(xx.copy())
+                plt.plot(xx, NDsplienf[0], label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
     
-    plt.plot(xx, truef, 'k--', label="True " + func.__name__)
-    
-    plt.legend(loc='best')
-    plt.plot(x, fvals, 'o')
-    plt.show()
+        
+        plt.plot(xx, truef, 'k--', label="True " + func.__name__)
+        plt.plot(x, fvals, 'ko')
+        plt.title('k=%d'%order)
+        
+        plt.legend(loc='best')
+        plt.show()
     
