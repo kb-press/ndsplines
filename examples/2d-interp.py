@@ -41,14 +41,14 @@ def wrap2d(funcx, funcy):
 funcs = [ wrap2d(*funcs_to_wrap) for funcs_to_wrap in itertools.combinations_with_replacement(funcs, r=2)]
 funcs.append(dist)
 
-x = np.linspace(0, 1, 7)
+x = np.linspace(0, 1, 5)
 y = np.linspace(0, 1, 7)
 
 xx = np.linspace(0,1,64) 
 yy = np.linspace(0,1,64)
 
-xx = np.linspace(-.25, 1.25, 64)
-yy = np.linspace(-.25, 1.25, 64)
+# xx = np.linspace(-.25, 1.25, 64)
+# yy = np.linspace(-.25, 1.25, 64)
 k = 3
 
 
@@ -62,13 +62,15 @@ gridxxyy = np.r_['0,3', meshxx, meshyy]
 for func in funcs:
     fvals = func(meshx, meshy)
     truef = func(meshxx, meshyy)
-    test_NDBspline = ndsplines.make_interp_spline(gridxy, fvals,)
-    test_RectSpline = interpolate.RectBivariateSpline(x, y, fvals)
+    test_NDBspline = ndsplines.make_interp_spline(gridxy, fvals, orders=k)
+    test_RectSpline = interpolate.RectBivariateSpline(x, y, fvals, kx=k, ky=k)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     
-    ax.plot_wireframe(meshxx, meshyy, truef, alpha=0.25, color='C0')
-    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[0], color='C1')
-    ax.plot_wireframe(meshxx, meshyy, test_RectSpline(meshxx, meshyy, grid=False), color='C2')
+    ax.plot_wireframe(meshxx, meshyy, truef, alpha=0.25, color='C0', label='True')
+    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[0], color='C1', label='ND')
+    ax.plot_wireframe(meshxx, meshyy, test_RectSpline(meshxx, meshyy, grid=False), color='C2', label='Rect')
+    
+    plt.legend(loc='best')
     plt.show()

@@ -55,7 +55,7 @@ ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)
 NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
 NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
 
-for order in range(4):
+for order in range(3,4):
     for func in funcs:
         fvals = func(x)
         truef = func(xx)
