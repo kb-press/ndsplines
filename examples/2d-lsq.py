@@ -1,3 +1,9 @@
+"""
+===============================
+2-Dimensional Least Squares Fit
+===============================
+"""
+
 import ndsplines 
 import matplotlib.pyplot as plt
 import numpy as np

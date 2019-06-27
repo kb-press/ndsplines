@@ -1,0 +1,5 @@
+-r requirements.txt
+matplotlib
+sphinx
+sphinx_gallery
+pytest

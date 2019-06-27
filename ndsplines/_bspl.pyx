@@ -3,6 +3,9 @@ Routines for evaluating and manipulating B-splines.
 
 """
 
+# This file contains code from SciPy which has been adapted to suit the needs
+# of ndsplines (scipy/interpolate/_bspl.pyx). See LICENSE for details.
+
 from __future__ import absolute_import
 
 import numpy as np
@@ -125,7 +128,7 @@ def evaluate_spline(const double[::1] t,
 
     # shape checks
     if interval_workspace.shape[0] < xp.shape[0]:
-        raise ValueError("basis_workspace and xp have incompatible shapes")
+        raise ValueError("interval_workspace and xp have incompatible shapes")
     if basis_workspace.shape[0] < xp.shape[0]:
         raise ValueError("basis_workspace and xp have incompatible shapes")
     if basis_workspace.shape[1] != 2*k+3:

@@ -1,177 +1,67 @@
-Splines
--------
+=========
+ndsplines
+=========
 
-The basic idea of (tensor product) splines is that (in each dimension) you have 
-a $n$ (or $n_i$, with i indicating the dimension) samples of un-evenly spaced 
-data $(t_i, y_i=f(t_i))$ (so multi-dimensional data can be rectangular but not 
-unstructured). A B-spline is a piecewise $k$-th order polynomial interpolant 
-that can be constructed with nice properties such as $C^{k-1}$ continuity. The 
-interpolant is represented by $n+k+1$ knots, which are essentially the $t_i$ but
-extra points that are determined by the data independent variable and the 
-desired properties at the ends of the interpolant including extrapolation 
-properties and $n$ coefficients which are the projection of the $y_i$ data onto
-the B-spline basis functions.
+This is a Python package for multivariate B-splines with performant C(ython) and
+NumPy implementations.
 
-Intuition on order: A $k=0$ B-spline is piecewise constant, often called 
-"nearest-neighbor" interpolation. A $k=0$ B-spline is piecewise linear. A $k=3$
-B-spline is the default and produces aesthetically pleasing curves that can also
-be represented as the solution to thin-beam bending dynamics.
+Usage
+-----
 
-A key feature of the B-splines is that for $n$ data-points, there are $n$
-basis functions, but only $k+1$ are non-zero on any particular panel (domain
-between knots). So to interpolate a large data set requires only evaluating
-the linear combination of $k+1$ elements (for each dimension), as in
+The easiest way to use ndspliens is to call ``make_interp_spline`` or 
+``make_lsq_spline`` on your problem data, as in
 
-\hat{f} (x) = \sum_{i = j}^{j+k+1} c_i u_i (x)
+.. code:: python
 
-where $u_i$ is the $i$th basis function, and $c_i$ is the ith coefficient, and
-$j$ is the first index with a non-zero basis function. The sum could easily run
-over all $n$ elemnets, but most summands are zero.
+     import ndsplines
+     import matplotlib.pyplot as plt
+     import numpy as np
 
-In Matlab, these spline interpolations are implemnted in:
-    - Spline Toolbox, which also includes regression using splines
-    - `interpn`, `interp{1|2|3}`, and `spline` (an alias for interp1) which 
-      together may be a replacement for the spline toolbox?
+     x = np.linspace(-3, 3, 50)
+     y = np.exp(-x**2) + 0.1 * np.random.randn(50)
 
- Spline Toolbox was written by Carl de Boor, who wrote many seminal articles 
- and books on splines. Most algorithms for evaluating the basis functions and
- computing the coefficients and knots from data were developed by de Boor.
+     t = [-1, 0, 1]
+     k = 3
+     t = np.r_[(x[0],)*(k+1),
+               t,
+               (x[-1],)*(k+1)]
 
+     ndspl = ndsplines.make_lsq_spline(x, y, t, 3)
 
-In Python, SciPy provides:
-
-    - `splrep` and `splev`, which are thin wrappers around fortran functions by
-      the same name. These functions construct the knot and coefficient sequence
-      given a sequence of 1-D data and evaluate the B-splines given the knot and
-      coefficient sequence. The fortran supports only a single set of 
-      coefficients, but the python wrapper will recursively call itself to 
-      evaluate using multiple coefficients.
-
-    - I believe there was short-lived class-based interface for `splrep` and 
-      `splev`.
-
-    - `BSpline`, which is a newer interface using pure Python, Cython and C for
-      1-D splines. This supports a Cython-loop over sets of coefficients.
-
-    - A number of interfaces for N-D unevenly spaced data limited to $k=0$ 
-      (nearest neighbor) or $k=1$ (piecewise linear) interpolation (`interpn` 
-      and `RegularGridInterpolator`), 2D tensor spline interpolation
-      (`RectBivariateSpline`), or N-D evenly spaced data (`ndimage`).
-
-
-Full comparison:
-interp1d(x, y[, kind, axis, copy, …])  
-CubicSpline(x, y[,
-BPoly(c, x[, e
-
-LinearNDInterpolator(points, values[, …])
-NearestNDInterpolator(x, y)   Nearest-neighbour interpolation in N dimensions.
-interp2d(x, y, z[, kind, copy, 
-interpn(points, values, xi[, method, …])
-RegularGridInterpolator(points, values[, …])
-RectBivariateSpline - see below
-
-interpolate.BSpline --> new Cython implementation of B-Spline
-interpolate.splrep|splprep|splev|... --> FITPACK B-spline wrappers - functional
-interpolate.UnivariateSpline|InterpolatedUnivariateSpline|LSQUnivariateSpline  --> FITPACK - "object oriented"
-(I assume the first two are just splprep with s=0 equivalent)
+     xs = np.linspace(-3, 3, 100)
+     plt.figure()
+     plt.plot(x, y, 'o', ms=5)
+     plt.plot(xs, ndspl(xs).squeeze(), label='LSQ spline')
+     plt.legend(loc='best')
+     plt.show()
 
 
 
-interpolate.RectBivariateSpline   Bivariate spline approximation over a rectangular mesh.
-RectSphereBivariateSpline(u, v, r[, s, …])  Bivariate spline approximation over a rectangular mesh on a sphere.
 
-For unstructured data:
-BivariateSpline   Base class for bivariate splines.
-SmoothBivariateSpline(x, y, z[, w, bbox, …])  Smooth bivariate spline approximation.
-SmoothSphereBivariateSpline(theta, phi, r[, …])   Smooth bivariate spline approximation in spherical coordinates.
-LSQBivariateSpline(x, y, z, tx, ty[, w, …])   Weighted least-squares bivariate spline approximation.
-LSQSphereBivariateSpline(theta, phi, r, tt, tp)   Weighted least-squares bivariate spline approximation in spherical coordinates.
+Installation
+------------
 
-Low-level interface to FITPACK functions:
-bisplrep(x, y, z[, w, xb, xe, yb, ye, kx, …])   Find a bivariate B-spline representation of a surface.
-bisplev(x, y, tck[, dx, dy])  Evaluate a bivariate B-spline and its derivatives.
+Install ndsplines with pip::
 
-interpolate.SmoothBivariateSpline - -> (dfitpack.surfit_lsq)
+    $ pip install ndsplines
 
-TODO: sort out the scipy.interpolate API to determine what to compare to.
-TODO: compare to other libraries like
- https://github.com/johntfoster/bspline, https://github.com/sintefmath/Splipy
+or from source::
 
-
-So far, I have worked on 2 implementations:
-    - Using splev on a set of coefficients to evaluate the u_i for each 
-      dimension, then collect the evaluation and use einsum to multiply and
-      sum the coefficients. This is definitely slow because I am allocating 
-      memory and iterating over a bunch of known zeros. I didn't realize that
-      to evaluate each basis function, I am looping in python over the the 
-      associated $n$ (for that dimension)
-    - Before I reviewed my math, I thought `ndimage` could be used with a simple
-      transformation for non-uniform knots. 
-
-Speed up thoughts:
-    - Drop-in Bspline for `splev` to reduce costs associated with evaluating
-      the coefficients
-    - Pure Python/NumPy implementation to efficiently evaluate the required
-      spline basis functions and perform the inner product
-    - New Cython-based implementation modeled after BSpline code
-
-For the first two, pre-allocating and keeping intermediate arrays between calls
-(check for same shape of `x`) would probably further speed-up. Between the 
-second two, I think I have a 
-
-
-It was easy to use the 1-D interfaces of knot/coefficient construction to build
-N-D knots/coefficients. It would be nice to support N-D least squares regression
-but I am not familiar with the direct construction of the linear equation.
-
-Assuming I effectively use the C(ython) API for NumPy, the Cython should be
-strictly faster, but the Pure Python/NumPy implementation should approach that
-speed as dimension, dataset size, and evaluation points increase.
-
-
-Profiling
----------
-
-built into ipython:
-
-From IPython shell
-In [ ]: %run -p 2d-profile.py
-
-There's also a python built-in that I don't know how to read the binary output of:
-
-python -m cProfile -o 2d.prof 2d-profile.py
-
-Shockingly, the first hit on google is just a 3rd party package for reading it 
-because there isn't/wasn't a good way to read them. Okay. Using line_profiler
-package:
-
-$ pip install line_profiler
-$ python 1d-profile.py
-
-
-I made the profiling explicit and decoupled from actual source code.
-
-Currently I'm just over 2x slower for 1D case callling single points, and usually
-better than 1.5x slower for 1D case for a vectorized call. This isn't too bad
-given the added funcitonality! I do see that the compute_basis_coefficient_selector method is
-spending ~7% of the time on iterator, so the whole function is a good candidate
-for cythonization. 
-
-Building
---------
-
-After profiling revealed that the scipy.interpolate._bspl implementation is 10x
-faster, I copied that code over to refactor to make the necessary parts accessible.
-
-Building requires Cython and Numpy::
-
-    $ pip install cython numpy
-
-Now build the ``_bspl`` module::
-
-    $ python setup.py build_ext -i
-
-Now you can install::
-
+    $ git clone https://github.com/sixpearls/ndsplines
+    $ cd ndsplines
     $ pip install -e .
+
+Note that in order to use the C(ython) implementation, NumPy must be installed
+and a C compiler configured before installing ndsplines.
+
+
+Documentation
+-------------
+
+Build the docs::
+
+    $ pip install -e .[docs]
+    $ cd docs
+    $ make html
+
+
