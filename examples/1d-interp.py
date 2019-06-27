@@ -85,8 +85,8 @@ for order in range(4):
             except ValueError:
                 continue
             else:
-                NDsplienf = test_NDBspline(xx.copy())
-                plt.plot(xx, NDsplienf[0], label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
+                NDsplinef = test_NDBspline(xx.copy())
+                plt.plot(xx, NDsplinef, label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
     
         
         plt.plot(xx, truef, 'k--', label="True " + func.__name__)

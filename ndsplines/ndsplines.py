@@ -51,7 +51,7 @@ class BSplineNDInterpolator(object):
         self.xdim = len(knots) # dimension of knots
 
         self.coefficients = coefficients
-        if coefficients.ndim == self.ndim:
+        if coefficients.ndim == self.xdim:
             self.mdim = 1
             self.squeeze = True
             self.coefficients = coefficients[None, ...]
@@ -156,12 +156,12 @@ class BSplineNDInterpolator(object):
             *self.u_arg, 
             self.output_op)
 
-        if (x_ndim > 1) and ((self.ndim > 1) or (size[0] != self.ndim)):
-            y_out = y_out.reshape((self.ydim,) + x_shape[1:])
-        if self.squeeze:
+        if self.squeeze and x_ndim > 1:
             return y_out.reshape(x_shape[1:])
+        elif self.squeeze and x_ndim == 1:
+            return y_out.reshape(x_shape)
           
-        return y_out
+        return y_out.reshape((self.ydim,) + x_shape[1:])
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     """
@@ -477,4 +477,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
 
             coefficients[coeff_line_sel] = c.T
+    if squeeze:
+        coefficients =coefficients[0, ...]
     return BSplineNDInterpolator(knots, coefficients, orders,)
