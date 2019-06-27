@@ -47,10 +47,21 @@ class BSplineNDInterpolator(object):
 
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
-        self.coefficients = coefficients
-        self.xdim = len(knots) # dimension of knots
         self.nis = np.array([len(knot) for knot in knots])
+        self.xdim = len(knots) # dimension of knots
+
+        self.coefficients = coefficients
+        if coefficients.ndim == self.xdim:
+            self.mdim = 1
+            self.squeeze = True
+            self.coefficients = coefficients[None, ...]
+        else:
+            self.mdim = coefficients.shape[0] # dimension of coefficeints
+            self.coefficients = coefficients
+            self.squeeze = False
+
         self.ydim = coefficients.shape[0] # dimension of coefficeints
+        
         self.orders = np.broadcast_to(orders, (self.xdim,))
         self.periodic = np.broadcast_to(periodic, (self.xdim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
@@ -144,9 +155,13 @@ class BSplineNDInterpolator(object):
         y_out = np.einsum(self.coefficients[coefficient_selector], self.coefficient_op, 
             *self.u_arg, 
             self.output_op)
-        if (x_ndim > 1) and ((self.xdim > 1) or (size[0] != self.xdim)):
-            y_out = y_out.reshape((self.ydim,) + x_shape[1:])
-        return y_out
+
+        if self.squeeze and x_ndim > 1:
+            return y_out.reshape(x_shape[1:])
+        elif self.squeeze and x_ndim == 1:
+            return y_out.reshape(x_shape)
+          
+        return y_out.reshape((self.ydim,) + x_shape[1:])
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     """
@@ -266,12 +281,15 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         
     else:
         raise ValueError("Don't know how to interpret x")
-    
+
+    squeeze = False
     if y.ndim == xdim:
+
         # how can you tell if y needs a [None, ...] or [...] ?
         # same question as to whether xdim is y.ndim or y.ndim-1
         # I think this is the right answer. 
         y = y[None, ...]
+        squeeze = True
     elif y.ndim == xdim+1:
         pass
     else:
@@ -459,4 +477,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
 
             coefficients[coeff_line_sel] = c.T
+    if squeeze:
+        coefficients =coefficients[0, ...]
     return BSplineNDInterpolator(knots, coefficients, orders,)
