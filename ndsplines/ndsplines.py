@@ -47,7 +47,6 @@ class BSplineNDInterpolator(object):
 
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
-        self.nis = np.array([len(knot) for knot in knots])
         self.xdim = len(knots) # dimension of knots
 
         self.coefficients = coefficients
