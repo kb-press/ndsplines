@@ -10,7 +10,7 @@ from ndsplines import _npy_bspl
 
 __all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
            'make_interp_spline', 'make_lsq_spline',
-           'make_interp_spline_from_tidy']
+           'make_interp_spline_from_tidy', 'from_file']
 
 """
 TODOs:
@@ -18,9 +18,6 @@ TODOs:
 
 create wrapper with callback to allow for creating anti-derivative splines, etc
 (use 1D operations that can be iterated over )
-
-
-make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfile?
 
 
 """
@@ -50,11 +47,9 @@ class BSplineNDInterpolator(object):
 
         self.coefficients = coefficients
         if coefficients.ndim == self.xdim:
-            self.mdim = 1
             self.squeeze = True
             self.coefficients = coefficients[None, ...]
         else:
-            self.mdim = coefficients.shape[0] # dimension of coefficeints
             self.coefficients = coefficients
             self.squeeze = False
 
@@ -160,6 +155,63 @@ class BSplineNDInterpolator(object):
             return y_out.reshape(x_shape)
           
         return y_out.reshape((self.ydim,) + x_shape[1:])
+
+    def to_file(self, file, compress=True):
+        """
+        Save attributes of `BSplineNDInterpolator` to a binary file in NumPy 
+        ``.npz`` format.
+
+        Saves knots in order with file name "knots_%d" where %d is the dimension
+        of the input space.
+
+        Parameters
+        ----------
+        file : file, str, or pathlib.Path
+            File or filename to which the data is saved.  If file is a file-object,
+            then the filename is unchanged.  If file is a string or Path, a ``.npz``
+            extension will be appended to the file name if it does not already
+            have one.
+        compress : bool, optional
+            Whether to compress the archive of attributes.
+        """
+        to_save_dict = {}
+        for idx, knot in zip(range(self.xdim), self.knots):
+            to_save_dict['knots_%d' % idx] = knot
+        to_save_dict['coefficients'] = self.coefficients
+        if self.squeeze:
+            to_save_dict['coefficients'] = self.coefficients[0, ...]
+        to_save_dict['orders'] = self.orders
+        to_save_dict['periodic'] = self.periodic
+        to_save_dict['extrapolate'] = self.extrapolate
+
+        if compress:
+            np.savez_compressed(file, **to_save_dict)
+        else:
+            np.savez(file, **to_save_dict)
+
+
+def from_file(file):
+    """
+    Create a `BSplineNDInterpolator` object from a NumPy archive containing the
+    necessary attributes.
+
+    Assumes knots are saved in order with file names"knots_%d" where %d is 
+    the dimension of the input space.
+
+    Parameters
+    ----------
+    file : file-like object, string, or pathlib.Path
+        The file to read. File-like objects must support the
+        ``seek()`` and ``read()`` methods. Pickled files require that the
+        file-like object support the ``readline()`` method as well.
+    """
+    with np.load(file) as data:
+        coefficients = data['coefficients']
+        orders = data['orders']
+        periodic = data['periodic']
+        extrapolate = data['extrapolate']
+        knots = [ data[key] for key in data.keys() if key.startswith("knots_") ]
+    return BSplineNDInterpolator(knots, coefficients, orders, periodic, extrapolate)
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     """
