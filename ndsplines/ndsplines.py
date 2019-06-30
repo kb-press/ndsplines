@@ -9,9 +9,8 @@ from scipy.interpolate._bsplines import (_as_float_array, _bspl as _sci_bspl,
 from ndsplines import _npy_bspl
 
 __all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline',]
-
-
+           'make_interp_spline', 'make_lsq_spline',
+           'make_interp_spline_from_tidy']
 
 """
 TODOs:
@@ -164,7 +163,7 @@ class BSplineNDInterpolator(object):
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     """
-    Construct an interpolating B-spline.
+    Construct a least squares regression B-spline.
 
     Parameters
     ----------
@@ -434,7 +433,6 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 offset_axes_remaining_sel)
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
-
             y_slice = coefficients[y_line_sel].T
 
             # special-case k=0 right away
@@ -479,3 +477,58 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     if squeeze:
         coefficients =coefficients[0, ...]
     return BSplineNDInterpolator(knots, coefficients, orders,)
+
+
+try:
+    import pandas as pd
+except ImportError:
+    check_pandas = False
+else:
+    check_pandas = True
+
+def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, orders=3):
+    """
+    Construct an interpolating B-spline from a tidy data source. The tidy data
+    source should be a complete matrix (see the tidy_data parameter description).
+    The order of the input_vars and output_vars will be the same as the 
+    constructed interpolant.
+
+    Parameters
+    ----------
+    tidy_data : array_like, shape (num_points, xdim + ydim)
+        Pandas DataFrame or NumPy Array of data. In order to be a complete 
+        matrix, we must have
+        num_points = prod( nunique(input_var) for input_var in input_vars)
+        Any missing data will cause an error on reshape.
+    input_vars : iterable 
+        Column names (for DataFrame) or indices (for np.ndarray) for input
+        variables.
+    output_vars : iterable 
+        Column names (for DataFrame) or indices (for np.ndarray) for output
+        variables.
+    bcs : (list of) 2-tuples or None
+    orders : ndarray, shape=(ndim,), dtype=np.intc
+        Degree of interpolant for each axis (or broadcastable)
+    """
+
+    if check_pandas and isinstance(tidy_data, pd.DataFrame):
+        tidy_df = tidy_data
+        input_vars = [tidy_df.columns.get_loc(input_var) for input_var in input_vars]
+        output_vars = [tidy_df.columns.get_loc(output_var) for output_var in output_vars]
+        tidy_data = tidy_data.values
+        is_pandas = True
+    else:
+        input_vars = list(input_vars)
+        output_vars = list(output_vars)
+
+    meshgrid_shape = [np.unique(tidy_data[:, input_var]).size for input_var in input_vars] + [tidy_data.shape[1],]
+
+    sort_indices = np.lexsort(tidy_data[:,input_vars[::-1]].T)
+    sorted_data = tidy_data[sort_indices, :]
+    meshgrid_data = np.moveaxis(sorted_data.reshape(
+            meshgrid_shape
+        ), -1, 0)
+
+    xdata = meshgrid_data[input_vars, ...]
+    ydata = meshgrid_data[output_vars, ...]
+    return make_interp_spline(xdata, ydata, bcs, orders)
