@@ -66,12 +66,15 @@ for func in funcs:
     fvals = func(meshx, meshy)
     truef = func(meshxx, meshyy)
     
-    tidy_array = np.concatenate((tidyxy, fvals.reshape((-1,1))), axis=1)
+    tidy_array = np.concatenate((fvals.reshape((-1,1)), tidyxy,), axis=1)
     
-    tidy_df = pd.DataFrame(tidy_array, columns=['x', 'y', 'z'])
+    tidy_df = pd.DataFrame(tidy_array, columns=['z', 'x', 'y',])
     
-    test_NDBspline = ndsplines.make_interp_spline_from_table(tidy_df, ['x', 'y'], ['z'])
+    test_NDBspline = ndsplines.make_interp_spline_from_tidy(tidy_df, ['x', 'y'], ['z'])
     test_RectSpline = interpolate.RectBivariateSpline(x, y, fvals)
+    test_NDBspline2 = ndsplines.make_interp_spline_from_tidy(tidy_array, [1,2], [0])
+    
+    print(np.allclose(test_NDBspline2(gridxxyy),test_NDBspline(gridxxyy)))
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
