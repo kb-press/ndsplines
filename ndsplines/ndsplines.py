@@ -1,11 +1,16 @@
 import numpy as np
-from scipy import interpolate
+import operator
+from scipy._lib.six import string_types
+from scipy.linalg import (get_lapack_funcs, LinAlgError,
+                          cholesky_banded, cho_solve_banded)
+from scipy.interpolate._bsplines import (_as_float_array, _bspl as _sci_bspl, 
+    prod,)
+
 from ndsplines import _npy_bspl
 
-__all__ = ['pinned', 'clamped', 'extrap', 'periodic', 'BSplineNDInterpolator',
-           'make_interp_spline', 'make_lsq_spline', 
+__all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
+           'make_interp_spline', 'make_lsq_spline',
            'make_interp_spline_from_tidy']
-
 
 """
 TODOs:
@@ -14,20 +19,15 @@ TODOs:
 create wrapper with callback to allow for creating anti-derivative splines, etc
 (use 1D operations that can be iterated over )
 
-break out some of the knot normalization stuff (in interpolate.make_interp_spline)
-to make it easier to make lsq splines? would also be useful for making the
-make_interp_spline more efficient
 
 make sure these can be pickled (maybe store knots, coeffs, orders, etc to matfile?
 
 
 """
-pinned = 2
-clamped = 1
-extrap = 0
-periodic = -1
+clamped = np.array([1,0.0])
+pinned = np.array([2,0.0])
+notaknot = np.array([0,0.0])
 
-bc_map =  {clamped: "clamped", pinned: "natural", extrap: None, periodic: None}
 
 
 class BSplineNDInterpolator(object):
@@ -35,31 +35,41 @@ class BSplineNDInterpolator(object):
     Parameters
     ----------
     knots : list of ndarrays,
-        shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
-    coefficients : ndarray, shape=(mdim, n_1, n_2, ..., n_ndim), dtype=np.float_
-    orders : ndarray, shape=(ndim,), dtype=np.intc
-    periodic : ndarray, shape=(ndim,), dtype=np.bool_
-    extrapolate : ndarray, shape=(ndim,2), dtype=np.bool_
+        shapes=[n_1+orders[i-1]+1, ..., n_xdim+orders[-1]+1], dtype=np.float_
+    coefficients : ndarray, shape=(ydim, n_1, n_2, ..., n_xdim), dtype=np.float_
+    orders : ndarray, shape=(xdim,), dtype=np.int_
+    periodic : ndarray, shape=(xdim,), dtype=np.bool_
+    extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
     """
 
     impl = _npy_bspl
 
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
-        self.coefficients = coefficients
-        self.ndim = len(knots) # dimension of knots
-        self.nis = np.array([len(knot) for knot in knots])
-        self.mdim = coefficients.shape[0] # dimension of coefficeints
-        self.orders = np.broadcast_to(orders, (self.ndim,))
-        self.periodic = np.broadcast_to(periodic, (self.ndim,))
-        self.extrapolate = np.broadcast_to(extrapolate, (self.ndim,2))
+        self.xdim = len(knots) # dimension of knots
 
-        self.coefficient_op = [0,] + list(i for i in range(2,self.ndim+2)) + [1,]
-        self.u_ops = [[1, i+2] for i in range(self.ndim)]
+        self.coefficients = coefficients
+        if coefficients.ndim == self.xdim:
+            self.mdim = 1
+            self.squeeze = True
+            self.coefficients = coefficients[None, ...]
+        else:
+            self.mdim = coefficients.shape[0] # dimension of coefficeints
+            self.coefficients = coefficients
+            self.squeeze = False
+
+        self.ydim = coefficients.shape[0] # dimension of coefficeints
+        
+        self.orders = np.broadcast_to(orders, (self.xdim,))
+        self.periodic = np.broadcast_to(periodic, (self.xdim,))
+        self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
+
+        self.coefficient_op = [0,] + list(i for i in range(2,self.xdim+2)) + [1,]
+        self.u_ops = [[1, i+2] for i in range(self.xdim)]
         self.output_op = [0,1]
 
         self.coefficient_selector_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
-        self.coefficient_shape_base = (self.ndim,)+tuple(self.orders+1)
+        self.coefficient_shape_base = (self.xdim,)+tuple(self.orders+1)
 
         self.current_max_num_points = 0
         self.allocate_workspace_arrays(1)
@@ -70,15 +80,15 @@ class BSplineNDInterpolator(object):
         """
         Parameters
         ----------
-        x : ndarray, shape=(self.ndim, s) dtype=np.float_
-        nus : int or ndarray, shape=(self.ndim,) dtype=np.intc
+        x : ndarray, shape=(self.xdim, s) dtype=np.float_
+        nus : int or ndarray, shape=(self.xdim,) dtype=np.int_
         """
         num_points = x.shape[-1]
 
         if not isinstance(nus, np.ndarray):
             nu = nus
 
-        for i in range(self.ndim):
+        for i in range(self.xdim):
             t = self.knots[i]
             k = self.orders[i]
             if isinstance(nus, np.ndarray):
@@ -109,31 +119,31 @@ class BSplineNDInterpolator(object):
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
             self.basis_workspace = np.empty((
-                self.ndim, 
+                self.xdim, 
                 self.current_max_num_points,
                 2*np.max(self.orders)+3
             ), dtype=np.float_)
-            self.interval_workspace = np.empty((self.ndim, self.current_max_num_points, ), dtype=np.intc)
-            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc) 
+            self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
+            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc)
 
     def __call__(self, x, nus=0):
         """
         Parameters
         ----------
-        x : ndarray, shape=(self.ndim, ...) dtype=np.float_
-            Point(s) to evaluate spline on. Output will be (self.mdim,...)
-        nus : ndarray, broadcastable to shape=(self.ndim,) dtype=np.intc
+        x : ndarray, shape=(self.xdim, ...) dtype=np.float_
+            Point(s) to evaluate spline on. Output will be (self.ydim,...)
+        nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
             Order of derivative(s) for each dimension to evaluate
             
         """
         if not isinstance(x, np.ndarray):
             x = np.array(x)
         x_shape, x_ndim = x.shape, x.ndim
-        x = np.ascontiguousarray(x.reshape((self.ndim, -1)), dtype=np.float_)
+        x = np.ascontiguousarray(x.reshape((self.xdim, -1)), dtype=np.float_)
         num_points = x.shape[-1]
 
         if isinstance(nus, np.ndarray):
-            if nus.ndim != 1 or nus.size != self.ndim:
+            if nus.ndim != 1 or nus.size != self.xdim:
                 raise ValueError("nus is wrong shape")
 
         self.allocate_workspace_arrays(x.shape[-1])
@@ -143,9 +153,13 @@ class BSplineNDInterpolator(object):
         y_out = np.einsum(self.coefficients[coefficient_selector], self.coefficient_op, 
             *self.u_arg, 
             self.output_op)
-        if (x_ndim > 1) and ((self.ndim > 1) or (size[0] != self.ndim)):
-            y_out = y_out.reshape((self.mdim,) + x_shape[1:])
-        return y_out
+
+        if self.squeeze and x_ndim > 1:
+            return y_out.reshape(x_shape[1:])
+        elif self.squeeze and x_ndim == 1:
+            return y_out.reshape(x_shape)
+          
+        return y_out.reshape((self.ydim,) + x_shape[1:])
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     """
@@ -153,13 +167,13 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     Parameters
     ----------
-    x : array_like, shape (ndim, num_points)
+    x : array_like, shape (xdim, num_points)
         Abscissas.
-    y : array_like, shape (mdim, num_points)
+    y : array_like, shape (ydim, num_points)
         Ordinates.
-    knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_ndim, + orders[-1] + 1)
+    knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_xdim, + orders[-1] + 1)
         Knots and data points must satisfy Schoenberg-Whitney conditions.
-    orders : ndarray, shape=(ndim,), dtype=np.intc
+    orders : ndarray, shape=(xdim,), dtype=np.int_
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
@@ -175,8 +189,8 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
 
     """
-    ndim = x.shape[0]
-    mdim = y.shape[0]
+    xdim = x.shape[0]
+    ydim = y.shape[0]
     num_points = x.shape[1]
     assert x.shape[1] == y.shape[1]
     assert x.ndim == 2
@@ -187,7 +201,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
     
-    temp_spline = BSplineNDInterpolator(knots, np.empty(mdim), orders)
+    temp_spline = BSplineNDInterpolator(knots, np.empty(ydim), orders)
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
@@ -199,12 +213,33 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
 
-    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T)
-    temp_spline.coefficients = lsq_coefficients.T.reshape((mdim,) + knot_shapes )
+    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T, rcond=None)
+    temp_spline.coefficients = lsq_coefficients.T.reshape((ydim,) + knot_shapes )
 
     # TODO: I think people will want this matrix, is there a better way to give this to a user?
     temp_spline.observation_matrix = observation_matrix
     return temp_spline
+
+def _not_a_knot(x, k, left=True, right=True):
+    if k > 2 and k % 2 == 0:
+        raise ValueError("Odd degree for now only. Got %s." % k)
+    if k==0: # special case for k = 0, only apply to right
+        left = False
+    t = x
+    if left:
+        t = np.r_[(t[0],)*(k+1), t[(k -1) //2 +1:]]
+    if right:
+        t = np.r_[t[:-(k-1)//2 -1 or None], (t[-1],)*(k+1)]
+    return t
+
+def _augknt(x, k, left=True, right=True):
+    t = x
+    if left:
+        t = np.r_[(t[0],)*k, t]
+    if right:
+        t = np.r_[t, (t[-1],)*k]
+    return t
+
 
 
 def make_interp_spline(x, y, bcs=0, orders=3):
@@ -213,82 +248,235 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
     Parameters
     ----------
-    x : array_like, shape (ndim, n_1, n_2, ..., n_ndim) or arguments to np.meshgrid to construct same
-        Abscissas.
-    y : array_like, shape (mdim, n_1, n_2, ..., n_ndim)
-        Ordinates.
+    x : array_like broadcastable to (xdim, n_1, n_2, ..., n_xdim) or arguments to np.meshgrid to construct same
+        Abscissas. 
+    y : array_like, 
+        Ordinates. shape (ydim, n_1, n_2, ..., n_xdim)
     bcs : (list of) 2-tuples or None
-    orders : ndarray, shape=(ndim,), dtype=np.intc
+        2-tuple defines for each side a 2-tuple of (deriv_spec, spec_value)
+        Use deriv_spec == 0 for not-a-knot boundary condition
+        For k=0, both spec_values = 0 implements nearest-neighbor,
+        a single side with spec_value = 0 uses zero-order-hold from that direction
+    orders : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable)
-    periodic : ndarray, shape=(ndim,), dtype=np.bool_
-    extrapolate : ndarray, shape=(ndim,), dtype=np.bool_
+    periodic : ndarray, shape=(xdim,), dtype=np.bool_
+    extrapolate : ndarray, shape=(xdim,), dtype=np.bool_
 
     Notes
     -----
-    TODO: use scipy source to implement this more efficiently?
-    i.e., do knot computation once for each dimension, then coefficients for
-    each line 
+    Special case boundary condition - for k=0, 
     """
     if isinstance(x, np.ndarray): # mesh
         if x.ndim == 1:
-            ndim = 1
+            xdim = 1
             x = x[None,...]
         else:
-            ndim = x.ndim - 1
+            xdim = x.ndim - 1
 
     elif not isinstance(x, str) and len(x): # vectors, or try
-        ndim = len(x)
+        xdim = len(x)
         x = np.meshgrid(x, indexing='ij')
         
     else:
         raise ValueError("Don't know how to interpret x")
-    
-    if y.ndim == ndim:
+
+    squeeze = False
+    if y.ndim == xdim:
+
         # how can you tell if y needs a [None, ...] or [...] ?
-        # same question as to whether ndim is y.ndim or y.ndim-1
+        # same question as to whether xdim is y.ndim or y.ndim-1
         # I think this is the right answer. 
         y = y[None, ...]
-    elif y.ndim == ndim+1:
+        squeeze = True
+    elif y.ndim == xdim+1:
         pass
     else:
         raise ValueError("incompatible dimension size")
-    mdim = y.shape[0]
-    # generally, x.shape = (ndim, n1, n2, ..., n_ndim)
-    # and y.sahpe = (mdim, n1, n2, ..., n_ndim)
-    bcs = np.broadcast_to(bcs, (ndim,2))
-    orders = np.broadcast_to(orders, (ndim,))
-    deriv_specs = np.asarray((bcs[:,:]>0),dtype=np.int)
+    ydim = y.shape[0]
+    # generally, x.shape = (xdim, n1, n2, ..., n_xdim)
+    # and y.sahpe = (ydim, n1, n2, ..., n_xdim)
+    orders = np.broadcast_to(orders, (xdim,))
+
+    bcs = np.broadcast_to(bcs, (xdim,2,2))
+    deriv_specs = np.asarray((bcs[:,:,0]>0),dtype=np.int)
+    nak_spec = np.asarray((bcs[:,:,0]<=0),dtype=np.bool)
 
     knots = []
     coefficients = np.pad(y, np.r_[np.c_[0,0], deriv_specs], 'constant')
 
-    for i in np.arange(ndim)+1:
+    axis=0
+    check_finite=True
+
+    for i in np.arange(xdim)+1:
         all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:i],
             y.shape[i+1:]], dtype=np.int)
         x_line_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) +
-            (0,)*(ndim-i))
-        xp = x[x_line_sel]
-        order = orders[i-1]
+            (0,)*(xdim-i))
+        x_slice = x[x_line_sel]
+        k = orders[i-1]
+
+        left_nak, right_nak = nak_spec[i-1, :]
+        both_nak = left_nak and right_nak
+
+        # Here : deriv_l, r = [(nu, value), ...]
+        deriv_l_ords, deriv_r_ords = bcs[i-1, :, 0].astype(np.int_)
+
+        x_slice = _as_float_array(x_slice, check_finite)
+        # should there be a general check for k <= deriv_spec ?
+
+        if k == 0:
+            # all derivatives are fully defined, can only set 0-th derivative,
+            # special case for nearest-neighbor, causal/anti-causal zero-order
+            # hold
+            if not both_nak:
+                raise ValueError("Too much info for k=0: t and bc_type can only "
+                                 "be notaknot.")
+
+            left_zero, right_zero = (bcs[i-1, :, 1]==0)
+
+            if left_zero and right_zero:
+                t = np.r_[x_slice[0], (x_slice[:-1] + x_slice[1:])/2., x_slice[-1]]
+            elif not left_zero and right_zero:
+                t = np.r_[x_slice, x_slice[-1]]
+            elif left_zero and not right_zero:
+                t = np.r_[x_slice[0], x_slice]
+            else:
+                raise ValueError("Set deriv_spec = 0, with up to one side = -1 for k=0")
+
+        # special-case k=1 (e.g., Lyche and Morken, Eq.(2.16))
+        if k == 1:
+            # all derivatives are fully defined, can only set 0-th derivative,
+            # aka not-a-knot boundary conditions to both sides
+            if not both_nak:
+                raise ValueError("Too much info for k=1: bc_type can only be notaknot.")
+
+        if k==2:
+            # it's possible this may be the best behavior for all even k > 0
+            if both_nak:
+                # special, ad-hoc case using greville sites
+                t = (x_slice[1:] + x_slice[:-1]) / 2.
+                t = np.r_[(x_slice[0],)*(k+1),
+                           t[1:-1],
+                           (x_slice[-1],)*(k+1)]
+
+            elif left_nak or right_nak:
+                raise ValueError("For k=2, can set both sides or neither side to notaknot")
+            else:
+                t = x_slice
+
+        elif k != 0:
+            t = _not_a_knot(x_slice, k, left_nak, right_nak)
+
+        t = _augknt(t, k, not left_nak, not right_nak)
+
+        t = _as_float_array(t, check_finite)
+        
+    
+        if left_nak:
+            deriv_l_ords = np.array([])
+            deriv_l_vals = np.array([])
+            nleft = 0
+        else:
+            deriv_l_ords = np.array([bcs[i-1, 0, 0]], dtype=np.int_)
+            deriv_l_vals = np.broadcast_to(bcs[i-1, 0, 1], ydim)
+            nleft = 1
+
+        if right_nak:
+            deriv_r_ords = np.array([])
+            deriv_r_vals = np.array([])
+            nright = 0
+        else:
+            deriv_r_ords = np.array([bcs[i-1, 1, 0]], dtype=np.int_)
+            deriv_r_vals = np.broadcast_to(bcs[i-1, 1, 1], ydim)
+            nright = 1
+
+        # have `n` conditions for `nt` coefficients; need nt-n derivatives
+        n = x_slice.size
+        nt = t.size - k - 1
+        
+        # this also catches if deriv_spec > k-1, possibly?
+        if np.clip(nt - n, 0, np.inf).astype(int) != nleft + nright:
+            raise ValueError("The number of derivatives at boundaries does not "
+                             "match: expected %s, got %s+%s" % (nt-n, nleft, nright))
+
+        # set up the LHS: the collocation matrix + derivatives at boundaries
+        kl = ku = k
+        ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
+        _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
+        if nleft > 0:
+            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+        if nright > 0:
+            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+                                    offset=nt-nright)
+
+        knots.append(t)
+
+        if k >= 2:
+            if x_slice.ndim != 1 or np.any(x_slice[1:] <= x_slice[:-1]):
+                raise ValueError("Expect x_slice to be a 1-D sorted array_like.")
+            if k < 0:
+                raise ValueError("Expect non-negative k.")
+            if t.ndim != 1 or np.any(t[1:] < t[:-1]):
+                raise ValueError("Expect t to be a 1-D sorted array_like.")
+            if t.size < x_slice.size + k + 1:
+                raise ValueError('Got %d knots, need at least %d.' %
+                                 (t.size, x_slice.size + k + 1))
+            if (x_slice[0] < t[k]) or (x_slice[-1] > t[-k]):
+                raise ValueError('Out of bounds w/ x_slice = %s.' % x_slice)
+
+
         for idx in np.ndindex(*all_other_ax_shape):
             offset_axes_remaining_sel = (tuple(idx[i-1:] + 
                 deriv_specs[i:,0]))
             y_line_sel = ((Ellipsis,) + idx[:i-1] + 
-                (slice(deriv_specs[i-1,0],-deriv_specs[i-1,0] or None),) +
+                (slice(deriv_specs[i-1,0],-deriv_specs[i-1,1] or None),) +
                 offset_axes_remaining_sel)
             coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
                 + offset_axes_remaining_sel)
-            line_spline = interpolate.make_interp_spline(xp,
-                coefficients[y_line_sel].T,
-                k = order,
-                bc_type=(bc_map[(bcs[i-1,0])],
-                         bc_map[(bcs[i-1,1])]),
+            y_slice = coefficients[y_line_sel].T
 
-            )
-            coefficients[coeff_line_sel] = line_spline.c.T
-        knots.append(line_spline.t)
-    return BSplineNDInterpolator(knots, coefficients, orders, 
-        np.all(bcs==periodic, axis=1),
-        (bcs >= 0))
+            # special-case k=0 right away
+            if k == 0:
+                c = np.asarray(y_slice)
+
+            # special-case k=1 (e.g., Lyche and Morken, Eq.(2.16))
+            elif k == 1:
+                c = np.asarray(y_slice)
+
+            else:
+                y_slice = _as_float_array(y_slice, check_finite)
+                k = operator.index(k)
+
+                if x_slice.size != y_slice.shape[0]:
+                    raise ValueError('x_slice and y_slice are incompatible.')
+
+                # set up the RHS: values to interpolate (+ derivative values, if any)
+                extradim = prod(y_slice.shape[1:])
+                rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
+                if nleft > 0:
+                    rhs[:nleft] = deriv_l_vals.reshape(-1, extradim)
+                rhs[nleft:nt - nright] = y_slice.reshape(-1, extradim)
+                if nright > 0:
+                    rhs[nt - nright:] = deriv_r_vals.reshape(-1, extradim)
+
+                # solve Ab @ x_slice = rhs; this is the relevant part of linalg.solve_banded
+                if check_finite:
+                    ab, rhs = map(np.asarray_chkfinite, (ab, rhs))
+                gbsv, = get_lapack_funcs(('gbsv',), (ab, rhs))
+                lu, piv, c, info = gbsv(kl, ku, ab, rhs,
+                        overwrite_ab=False, overwrite_b=True)
+
+                if info > 0:
+                    raise LinAlgError("Collocation matix is singular.")
+                elif info < 0:
+                    raise ValueError('illegal value in %d-th argument of internal gbsv' % -info)
+
+                c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
+
+            coefficients[coeff_line_sel] = c.T
+    if squeeze:
+        coefficients =coefficients[0, ...]
+    return BSplineNDInterpolator(knots, coefficients, orders,)
 
 
 try:
