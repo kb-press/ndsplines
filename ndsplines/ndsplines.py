@@ -53,7 +53,7 @@ class BSplineNDInterpolator(object):
             self.coefficients = coefficients
             self.squeeze = False
 
-        self.ydim = coefficients.shape[0] # dimension of coefficeints
+        self.ydim = self.coefficients.shape[0] # dimension of coefficeints
         
         self.orders = np.broadcast_to(orders, (self.xdim,))
         self.periodic = np.broadcast_to(periodic, (self.xdim,))
@@ -153,8 +153,10 @@ class BSplineNDInterpolator(object):
             return y_out.reshape(x_shape[1:])
         elif self.squeeze and x_ndim == 1:
             return y_out.reshape(x_shape)
-          
-        return y_out.reshape((self.ydim,) + x_shape[1:])
+        
+        if x_ndim > 1:
+            return y_out.reshape((self.ydim,) + x_shape[1:])
+        return y_out.reshape((self.ydim,) + x_shape)
 
     def to_file(self, file, compress=True):
         """
