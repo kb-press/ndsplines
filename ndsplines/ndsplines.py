@@ -8,7 +8,7 @@ from scipy.interpolate._bsplines import (prod, _as_float_array,
 
 from ndsplines import _npy_bspl
 
-__all__ = ['pinned', 'clamped', 'notaknot', 'BSplineNDInterpolator',
+__all__ = ['pinned', 'clamped', 'notaknot', 'NDSpline',
            'make_interp_spline', 'make_lsq_spline',
            'make_interp_spline_from_tidy', 'from_file']
 
@@ -28,7 +28,7 @@ pinned = np.array([2, 0.0])
 notaknot = np.array([0, 0.0])
 
 
-class BSplineNDInterpolator(object):
+class NDSpline(object):
     """
     Parameters
     ----------
@@ -163,7 +163,7 @@ class BSplineNDInterpolator(object):
 
     def to_file(self, file, compress=True):
         """
-        Save attributes of `BSplineNDInterpolator` to a binary file in NumPy 
+        Save attributes of `NDSpline` to a binary file in NumPy 
         ``.npz`` format.
 
         Saves knots in order with file name "knots_%d" where %d is the dimension
@@ -197,7 +197,7 @@ class BSplineNDInterpolator(object):
 
 def from_file(file):
     """
-    Create a `BSplineNDInterpolator` object from a NumPy archive containing the
+    Create a `NDSpline` object from a NumPy archive containing the
     necessary attributes.
 
     Assumes knots are saved in order with file names"knots_%d" where %d is 
@@ -216,7 +216,7 @@ def from_file(file):
         periodic = data['periodic']
         extrapolate = data['extrapolate']
         knots = [ data[key] for key in data.keys() if key.startswith("knots_") ]
-    return BSplineNDInterpolator(knots, coefficients, orders, periodic, extrapolate)
+    return NDSpline(knots, coefficients, orders, periodic, extrapolate)
 
 
 def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
@@ -259,7 +259,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
 
-    temp_spline = BSplineNDInterpolator(knots, np.empty(ydim), orders)
+    temp_spline = NDSpline(knots, np.empty(ydim), orders)
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
@@ -530,7 +530,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
             coefficients[coeff_line_sel] = c.T
     if squeeze:
         coefficients =coefficients[0, ...]
-    return BSplineNDInterpolator(knots, coefficients, orders,)
+    return NDSpline(knots, coefficients, orders,)
 
 
 try:
