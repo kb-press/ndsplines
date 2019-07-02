@@ -72,6 +72,17 @@ class NDSpline(object):
 
         self.u_arg = [subarg for arg in zip(self.basis_workspace, self.u_ops) for subarg in arg]
 
+    def allocate_workspace_arrays(self, num_points):
+        if self.current_max_num_points < num_points:
+            self.current_max_num_points = num_points
+            self.basis_workspace = np.empty((
+                self.xdim,
+                self.current_max_num_points,
+                2*np.max(self.orders)+3
+            ), dtype=np.float_)
+            self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
+            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc)
+
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
         Parameters
@@ -110,17 +121,6 @@ class NDSpline(object):
                 out=self.coefficient_selector[i, ..., :num_points])
 
             self.u_arg[2*i] = self.basis_workspace[i][:num_points, :self.orders[i]+1]
-
-    def allocate_workspace_arrays(self, num_points):
-        if self.current_max_num_points < num_points:
-            self.current_max_num_points = num_points
-            self.basis_workspace = np.empty((
-                self.xdim,
-                self.current_max_num_points,
-                2*np.max(self.orders)+3
-            ), dtype=np.float_)
-            self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
-            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc)
 
     def __call__(self, x, nus=0):
         """
