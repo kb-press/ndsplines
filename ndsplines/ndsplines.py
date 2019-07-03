@@ -45,27 +45,27 @@ class NDSpline(object):
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
         self.xdim = len(knots) # dimension of knots
-
-        self.coefficients = coefficients
-        if coefficients.ndim == self.xdim:
-            self.squeeze = True
-            self.coefficients = coefficients[None, ...]
-        else:
-            self.coefficients = coefficients
-            self.squeeze = False
-
-        self.ydim = self.coefficients.shape[0] # dimension of coefficeints
-
+        self.xshape = tuple(knot.size for knot in knots)
+        
         self.orders = np.broadcast_to(orders, (self.xdim,))
+        self.max_order = np.max(self.orders)
         self.periodic = np.broadcast_to(periodic, (self.xdim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
-        self.coefficient_op = [0,] + list(i for i in range(2,self.xdim+2)) + [1,]
-        self.u_ops = [[1, i+2] for i in range(self.xdim)]
-        self.output_op = [0,1]
+        assert np.all(coefficients.shape[:self.xdim] == self.xshape - self.orders - 1)
+
+        self.yshape = coefficients.shape[self.xdim:]
+        self.ydim = prod(self.yshape)
+        self.coefficients = coefficients.reshape( tuple(self.xshape - self.orders - 1,) + (self.ydim,))
+
+        
+
+        self.coefficient_op = list(i for i in range(self.xdim+2))
+        self.u_ops = [[self.xdim, i] for i in range(self.xdim)]
+        self.output_op = [self.xdim, self.xdim+1]
 
         self.coefficient_selector_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
-        self.coefficient_shape_base = (self.xdim,)+tuple(self.orders+1)
+        self.coefficient_shape_base = tuple(self.orders+1) + (self.xdim,)
 
         self.current_max_num_points = 0
         self.allocate_workspace_arrays(1)
@@ -78,19 +78,19 @@ class NDSpline(object):
             self.basis_workspace = np.empty((
                 self.xdim,
                 self.current_max_num_points,
-                2*np.max(self.orders)+3
+                2*self.max_order+3,
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
-            self.coefficient_selector = np.empty(self.coefficient_shape_base + (self.current_max_num_points,), dtype=np.intc)
+            self.coefficient_selector = np.empty((self.current_max_num_points,) + self.coefficient_shape_base, dtype=np.intc)
 
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
         Parameters
         ----------
-        x : ndarray, shape=(self.xdim, s) dtype=np.float_
+        x : ndarray, shape=(s, self.xdim,) dtype=np.float_
         nus : int or ndarray, shape=(self.xdim,) dtype=np.int_
         """
-        num_points = x.shape[-1]
+        num_points = x.shape[0]
 
         if not isinstance(nus, np.ndarray):
             nu = nus
@@ -102,64 +102,63 @@ class NDSpline(object):
                 nu = nus[i]
             if self.periodic[i]:
                 n = t.size - k - 1
-                x[i,:] = t[k] + (x[i,:] - t[k]) % (t[n] - t[k])
+                x[:,i] = t[k] + (x[:,i] - t[k]) % (t[n] - t[k])
                 extrapolate_flag = False
             else:
                 if not self.extrapolate[i,0]:
-                    lt_sel = x[i,:] < t[k]
-                    x[i,lt_sel] = t[k]
+                    lt_sel = x[:, i] < t[k]
+                    x[lt_sel, i] = t[k]
                 if not self.extrapolate[i,1]:
-                    gte_sel = t[-k-1] < x[i,:]
-                    x[i,gte_sel] = t[-k-1]
+                    gte_sel = t[-k-1] < x[:, i]
+                    x[gte_sel, i] = t[-k-1]
                 extrapolate_flag = True
 
 
-            self.impl.evaluate_spline(t, k, x[i,:], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            self.impl.evaluate_spline(t, k, x[:,i], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
-                self.coefficient_selector_base[i][..., None],
-                self.interval_workspace[i][:num_points],
-                out=self.coefficient_selector[i, ..., :num_points])
+                self.coefficient_selector_base[i][None, ...],
+                # Broadcasting does not play nciely with xdim as last axis for some reason,
+                # so broadcasting manually. Need to determine speed concequences.
+                self.interval_workspace[i][(slice(0,num_points),) + (None,)*self.xdim],
+                out=self.coefficient_selector[:num_points, ..., i])
 
-            self.u_arg[2*i] = self.basis_workspace[i][:num_points, :self.orders[i]+1]
+            self.u_arg[2*i] = self.basis_workspace[i, :num_points, :self.orders[i]+1]
 
     def __call__(self, x, nus=0):
         """
         Parameters
         ----------
-        x : ndarray, shape=(self.xdim, ...) dtype=np.float_
-            Point(s) to evaluate spline on. Output will be (self.ydim,...)
+        x : ndarray, shape=(..., self.xdim) dtype=np.float_
+            Point(s) to evaluate spline on. Output will be (..., self.yshape)
         nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
             Order of derivative(s) for each dimension to evaluate
 
         """
         if not isinstance(x, np.ndarray):
             x = np.array(x)
-        if x.ndim == 1:
+        if x.ndim == 1 and self.xdim==1: # multiple points in 1D space
+            x = x[:, None]
+        elif x.ndim == 1 and x.size == self.xdim: # 1 point in ND space
             x = x[None, :]
+
         x_shape, x_ndim = x.shape, x.ndim
-        x = np.ascontiguousarray(x.reshape((self.xdim, -1)), dtype=np.float_)
-        num_points = x.shape[-1]
+        # need to double transpose so slices of all `i`th dim coords are c-contiguous
+        x = np.ascontiguousarray(x.reshape((-1, self.xdim)).T, dtype=np.float_).T
+        num_points = x.shape[0]
 
         if isinstance(nus, np.ndarray):
             if nus.ndim != 1 or nus.size != self.xdim:
                 raise ValueError("nus is wrong shape")
 
-        self.allocate_workspace_arrays(x.shape[-1])
+        self.allocate_workspace_arrays(x.shape[0])
         self.compute_basis_coefficient_selector(x, nus)
-        coefficient_selector = (slice(None),) + tuple(self.coefficient_selector[..., :num_points])
+        coefficient_selector = tuple(self.coefficient_selector[:num_points, ...].swapaxes(0,-1)) + (slice(None),)
 
         y_out = np.einsum(self.coefficients[coefficient_selector], self.coefficient_op,
             *self.u_arg,
             self.output_op)
 
-        if self.squeeze and x_ndim > 1:
-            return y_out.reshape(x_shape[1:])
-        elif self.squeeze and x_ndim == 1:
-            return y_out.reshape(x_shape)
-
-        if x_ndim > 1:
-            return y_out.reshape((self.ydim,) + x_shape[1:])
-        return y_out.reshape((self.ydim,) + x_shape)
+        return y_out.reshape((x_shape[:-1] + self.yshape))
 
     def to_file(self, file, compress=True):
         """
@@ -225,13 +224,13 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     Parameters
     ----------
-    x : array_like, shape (xdim, num_points)
+    x : array_like, shape (num_points, xdim)
         Abscissas.
-    y : array_like, shape (ydim, num_points)
+    y : array_like, shape (num_points, ydim)
         Ordinates.
     knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_xdim, + orders[-1] + 1)
         Knots and data points must satisfy Schoenberg-Whitney conditions.
-    orders : ndarray, shape=(xdim,), dtype=np.int_
+    orders : ndarray, shape=(xdim,), dtype=np.int_                           
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
@@ -247,32 +246,34 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
 
     """
-    xdim = x.shape[0]
-    ydim = y.shape[0]
-    num_points = x.shape[1]
-    assert x.shape[1] == y.shape[1]
-    assert x.ndim == 2
-    assert y.ndim == 2
+    if x.ndim == 1:
+        x = x[:, None]
+    xdim = x.shape[1]
+    num_points = x.shape[0]
 
-    # TODO: do appropriate shape checks, etc.
-    # TODO: check knot shape and order
+    yshape = y.shape[xdim:]
+    ydim = prod(yshape)
+    y = y.reshape(num_points, ydim)
 
+    # make slices c-contiguous
+    x = np.ascontiguousarray(x.T, dtype=np.float_).T
     knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
 
-    temp_spline = NDSpline(knots, np.empty(ydim), orders)
+    temp_spline = NDSpline(knots, np.empty(knot_shapes + yshape), orders)
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
-    observation_tensor_values = np.einsum(*temp_spline.u_arg, temp_spline.coefficient_op[1:-1] + [1,])
+    observation_tensor_values = np.einsum(*temp_spline.u_arg, temp_spline.coefficient_op[:-1])
     observation_tensor = np.zeros((num_points,) + knot_shapes)
-    observation_tensor[(np.arange(num_points),) + tuple(temp_spline.coefficient_selector[..., :num_points])] = observation_tensor_values
+    observation_tensor[(np.arange(num_points),) + tuple(temp_spline.coefficient_selector[:num_points, ...].swapaxes(0,-1))] = observation_tensor_values
 
     observation_matrix = observation_tensor.reshape((num_points, -1))
 
     # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
+    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y, rcond=None)
 
-    lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y.T, rcond=None)
-    temp_spline.coefficients = lsq_coefficients.T.reshape((ydim,) + knot_shapes )
+    temp_spline.coefficients = lsq_coefficients.reshape(knot_shapes + yshape)
+    temp_spline = NDSpline(knots, lsq_coefficients.reshape(knot_shapes + yshape), orders)
 
     # TODO: I think people will want this matrix, is there a better way to give this to a user?
     temp_spline.observation_matrix = observation_matrix
@@ -325,55 +326,49 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     """
     if isinstance(x, np.ndarray):  # mesh
         if x.ndim == 1:
-            x = x[None, ...]
-        xdim = x.shape[0]
+            x = x[..., None]
+        xdim = x.shape[-1]
     elif not isinstance(x, str) and len(x):  # vectors
         xdim = len(x)
         x = np.stack(np.meshgrid(*x, indexing='ij'))
     else:
         raise ValueError("Don't know how to interpret x")
+    
+    assert y.shape[:xdim] == x.shape[:xdim]
 
-    squeeze = False
-    if y.ndim == xdim:
-        # how can you tell if y needs a [None, ...] or [...] ?
-        # same question as to whether xdim is y.ndim or y.ndim-1
-        # I think this is the right answer.
-        y = y[None, ...]
-        squeeze = True
-    elif y.ndim == xdim+1:
-        pass
-    else:
-        raise ValueError("incompatible dimension size")
-    ydim = y.shape[0]
+    yshape = y.shape[xdim:]
+    ydim = prod(yshape)
 
-    # generally, x.shape = (xdim, n1, n2, ..., n_xdim)
-    # and y.sahpe = (ydim, n1, n2, ..., n_xdim)
+
+    # generally, x.shape = (n_0, n_1, ..., n_(xdim-1), xdim)
+    # and y.sahpe = (n_0, n_1, ..., n_(xdim-1), ydim)
 
     orders = np.broadcast_to(orders, (xdim,))
 
+    # broadcasting does not play nicely with xdim as last axis for some reason
     bcs = np.broadcast_to(bcs, (xdim, 2, 2))
     deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=np.int)
     nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=np.bool)
 
     knots = []
-    coefficients = np.pad(y, np.r_[np.c_[0, 0], deriv_specs], 'constant')
+    coefficients = np.pad(y.reshape(x.shape[:-1] + (ydim,)), np.r_[deriv_specs, np.c_[0, 0]], 'constant')
 
     axis = 0
     check_finite = True
 
-    for i in np.arange(xdim)+1:
-        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:i],
-            y.shape[i+1:]], dtype=np.int)
-        x_line_sel = ((i-1,) + (0,)*(i-1) + (slice(None,None),) +
-            (0,)*(xdim-i))
+    for i in np.arange(xdim):
+        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[:i],
+            y.shape[i+1:xdim]], dtype=np.int)
+        x_line_sel = ((0,)*(i) + (slice(None,None),) +
+            (0,)*(xdim-i-1) + (i,))
         x_slice = x[x_line_sel]
-        k = orders[i-1]
+        k = orders[i]
 
-        left_nak, right_nak = nak_spec[i-1, :]
+        left_nak, right_nak = nak_spec[i, :]
         both_nak = left_nak and right_nak
 
         # Here : deriv_l, r = [(nu, value), ...]
-        deriv_l_ords, deriv_r_ords = bcs[i-1, :, 0].astype(np.int_)
+        deriv_l_ords, deriv_r_ords = bcs[i, :, 0].astype(np.int_)
 
         x_slice = _as_float_array(x_slice, check_finite)
         # should there be a general check for k <= deriv_spec ?
@@ -386,7 +381,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                 raise ValueError("Too much info for k=0: t and bc_type can only "
                                  "be notaknot.")
 
-            left_zero, right_zero = (bcs[i-1, :, 1]==0)
+            left_zero, right_zero = (bcs[i, :, 1]==0)
 
             if left_zero and right_zero:
                 t = np.r_[x_slice[0], (x_slice[:-1] + x_slice[1:])/2., x_slice[-1]]
@@ -480,14 +475,14 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
 
         for idx in np.ndindex(*all_other_ax_shape):
-            offset_axes_remaining_sel = (tuple(idx[i-1:] +
-                deriv_specs[i:,0]))
-            y_line_sel = ((Ellipsis,) + idx[:i-1] +
-                (slice(deriv_specs[i-1,0],-deriv_specs[i-1,1] or None),) +
-                offset_axes_remaining_sel)
-            coeff_line_sel = ((Ellipsis,) + idx[:i-1] + (slice(None,None),)
-                + offset_axes_remaining_sel)
-            y_slice = coefficients[y_line_sel].T
+            offset_axes_remaining_sel = (tuple(idx[i:] +
+                deriv_specs[i+1:, 0]))
+            y_line_sel = (idx[:i] +
+                (slice(deriv_specs[i,0],-deriv_specs[i, 1] or None),) +
+                offset_axes_remaining_sel + (Ellipsis,))
+            coeff_line_sel = (idx[:i] + (slice(None,None),)
+                + offset_axes_remaining_sel + (Ellipsis,))
+            y_slice = coefficients[y_line_sel]
 
             # special-case k=0 right away
             if k == 0:
@@ -505,13 +500,12 @@ def make_interp_spline(x, y, bcs=0, orders=3):
                     raise ValueError('x_slice and y_slice are incompatible.')
 
                 # set up the RHS: values to interpolate (+ derivative values, if any)
-                extradim = prod(y_slice.shape[1:])
-                rhs = np.empty((nt, extradim), dtype=y_slice.dtype)
+                rhs = np.empty((nt, ydim), dtype=y_slice.dtype)
                 if nleft > 0:
-                    rhs[:nleft] = deriv_l_vals.reshape(-1, extradim)
-                rhs[nleft:nt - nright] = y_slice.reshape(-1, extradim)
+                    rhs[:nleft] = deriv_l_vals.reshape(-1, ydim)
+                rhs[nleft:nt - nright] = y_slice.reshape(-1, ydim)
                 if nright > 0:
-                    rhs[nt - nright:] = deriv_r_vals.reshape(-1, extradim)
+                    rhs[nt - nright:] = deriv_r_vals.reshape(-1, ydim)
 
                 # solve Ab @ x_slice = rhs; this is the relevant part of linalg.solve_banded
                 if check_finite:
@@ -527,9 +521,8 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
                 c = np.ascontiguousarray(c.reshape((nt,) + y_slice.shape[1:]))
 
-            coefficients[coeff_line_sel] = c.T
-    if squeeze:
-        coefficients =coefficients[0, ...]
+            coefficients[coeff_line_sel] = c
+    coefficients = coefficients.reshape(coefficients.shape[:xdim] + yshape)
     return NDSpline(knots, coefficients, orders,)
 
 
@@ -579,10 +572,10 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, orde
 
     sort_indices = np.lexsort(tidy_data[:,input_vars[::-1]].T)
     sorted_data = tidy_data[sort_indices, :]
-    meshgrid_data = np.moveaxis(sorted_data.reshape(
+    meshgrid_data = sorted_data.reshape(
             meshgrid_shape
-        ), -1, 0)
+        )# np.moveaxis(, -1, 0)
 
-    xdata = meshgrid_data[input_vars, ...]
-    ydata = meshgrid_data[output_vars, ...]
+    xdata = meshgrid_data[..., input_vars]
+    ydata = meshgrid_data[..., output_vars]
     return make_interp_spline(xdata, ydata, bcs, orders)

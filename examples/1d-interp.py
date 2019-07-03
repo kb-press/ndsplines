@@ -40,7 +40,7 @@ scipy_test_bcs = np.array(list(itertools.chain(
 
 k0_bcs = np.array(list(
 itertools.product([(0,0), (0,-1)], repeat=2)
-)[:-1])[[-1,0,1]]
+)[:-1])[[-1, 0 ,1]]
 
 NDspline_dict = {"natural": ndsplines.pinned, "clamped": ndsplines.clamped, "not-a-knot": ndsplines.notaknot}
 
@@ -54,7 +54,7 @@ ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)
 NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
 NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
 
-for order in range(4):
+for order in range(0,4):
     for func in funcs:
         fvals = func(x)
         truef = func(xx)
@@ -80,6 +80,7 @@ for order in range(4):
         else:
             bc_iter = ndsplines_test_bcs
         for test_bc in bc_iter[plot_sel,:]:
+            # test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
             try:
                 test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
             except ValueError:

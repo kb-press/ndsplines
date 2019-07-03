@@ -56,11 +56,12 @@ k = 3
 
 meshx, meshy = np.meshgrid(x, y, indexing='ij')
 gridxy = np.r_['0,3', meshx, meshy]
-tidyxy = gridxy.reshape((2,-1)).T
+gridxy = np.stack((meshx, meshy), axis=-1)
+tidyxy = gridxy.reshape((-1,2))
 
 
 meshxx, meshyy = np.meshgrid(xx, yy, indexing='ij')
-gridxxyy = np.r_['0,3', meshxx, meshyy]
+gridxxyy = np.stack((meshxx, meshyy), axis=-1)
 
 for func in funcs:
     fvals = func(meshx, meshy)
@@ -69,7 +70,7 @@ for func in funcs:
     tidy_array = np.concatenate((fvals.reshape((-1,1)), tidyxy,), axis=1)
     
     tidy_df = pd.DataFrame(tidy_array, columns=['z', 'x', 'y',])
-    
+    test_NDBspline3 = ndsplines.make_interp_spline(gridxy, fvals[:, :, None])
     test_NDBspline = ndsplines.make_interp_spline_from_tidy(tidy_df, ['x', 'y'], ['z'])
     test_RectSpline = interpolate.RectBivariateSpline(x, y, fvals)
     test_NDBspline2 = ndsplines.make_interp_spline_from_tidy(tidy_array, [1,2], [0])
@@ -80,6 +81,6 @@ for func in funcs:
     ax = fig.add_subplot(111, projection='3d')
     
     ax.plot_wireframe(meshxx, meshyy, truef, alpha=0.25, color='C0')
-    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[0], color='C1')
+    ax.plot_wireframe(meshxx, meshyy, test_NDBspline(gridxxyy)[...,0], color='C1')
     ax.plot_wireframe(meshxx, meshyy, test_RectSpline(meshxx, meshyy, grid=False), color='C2')
     plt.show()
