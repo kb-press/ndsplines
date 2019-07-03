@@ -330,7 +330,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         xdim = x.shape[-1]
     elif not isinstance(x, str) and len(x):  # vectors
         xdim = len(x)
-        x = np.stack(np.meshgrid(*x, indexing='ij'))
+        x = np.stack(np.meshgrid(*x, indexing='ij'), axis=-1)
     else:
         raise ValueError("Don't know how to interpret x")
     
