@@ -5,7 +5,6 @@ from scipy.linalg import (get_lapack_funcs, LinAlgError, cholesky_banded,
                           cho_solve_banded)
 from scipy.interpolate._bsplines import (prod, _as_float_array,
                                          _bspl as _sci_bspl)
-from scipy.interpolate import _fitpack_impl
 
 from ndsplines import _npy_bspl
 
