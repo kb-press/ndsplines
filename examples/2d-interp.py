@@ -53,11 +53,11 @@ k = 3
 
 
 meshx, meshy = np.meshgrid(x, y, indexing='ij')
-gridxy = np.r_['0,3', meshx, meshy]
+gridxy = np.stack((meshx, meshy), axis=-1)
 
 
 meshxx, meshyy = np.meshgrid(xx, yy, indexing='ij')
-gridxxyy = np.r_['0,3', meshxx, meshyy]
+gridxxyy = np.stack((meshxx, meshyy), axis=-1)
 
 for func in funcs:
     fvals = func(meshx, meshy)

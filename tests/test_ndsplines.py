@@ -44,7 +44,7 @@ def test_make_interp_invalid_x():
 def test_make_interp_invalid_y():
     """Bad input raises ValueError."""
     with pytest.raises(ValueError):
-        ndsplines.make_interp_spline(np.arange(10), np.zeros((10, 10, 10, 10)))
+        ndsplines.make_interp_spline(np.arange(10), np.zeros((9, 10, 10, 10)))
 
 
 @pytest.mark.parametrize('n_vals', [[8, 16], [8, 10, 12]])
@@ -55,7 +55,7 @@ def test_make_interp_x_vectors(n_vals):
     were sampled on the grid.
     """
     x = [np.linspace(0, 1, n) for n in n_vals]
-    xgrid = np.stack(np.meshgrid(*x, indexing='ij'))
+    xgrid = np.stack(np.meshgrid(*x, indexing='ij'), axis=-1)
     y = np.random.rand(*n_vals)
 
     spl = ndsplines.make_interp_spline(x, y)
@@ -69,13 +69,13 @@ def test_make_interp_x_vectors(n_vals):
 def test_make_interp_x_mesh(n_vals):
     """Input x arrays of varying dimensionality."""
     xarrays = [np.linspace(0, 1, n) for n in n_vals]
-    x = np.stack(np.meshgrid(*xarrays, indexing='ij'))
+    x = np.stack(np.meshgrid(*xarrays, indexing='ij'), axis=-1)
     y = np.random.rand(*n_vals)
 
     spl = ndsplines.make_interp_spline(x, y)
     assert spl.xdim == len(n_vals)
 
-    xsamp = np.random.randn(len(n_vals), 10)
+    xsamp = np.random.randn(10, len(n_vals))
     assert spl(xsamp).shape == (10,)
 
 
@@ -83,7 +83,7 @@ def test_make_interp_x_mesh(n_vals):
 def test_make_interp_nd_y(ydim):
     """Multi-dimensional y."""
     x = np.linspace(0, 1, 10)
-    y = np.random.rand(ydim, 10)
+    y = np.random.rand(10, ydim)
 
     spl = ndsplines.make_interp_spline(x, y)
 
@@ -91,7 +91,7 @@ def test_make_interp_nd_y(ydim):
     assert spl.ydim == ydim
 
     samps = spl(np.random.rand(20))
-    assert samps.shape == (ydim, 20)
+    assert samps.shape == (20, ydim)
 
 
 def test_make_interp_1d_y():

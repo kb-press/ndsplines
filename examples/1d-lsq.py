@@ -18,7 +18,7 @@ t = np.r_[(x[0],)*(k+1),
           t,
           (x[-1],)*(k+1)]
 
-ndspl = ndsplines.make_lsq_spline(x[None, :], y[None, :], [t], np.array([k]))
+ndspl = ndsplines.make_lsq_spline(x[:, None], y[:, None], [t], np.array([k]))
 ispl = interpolate.make_lsq_spline(x, y, t, k)
 
 xs = np.linspace(-3, 3, 100)
