@@ -307,10 +307,11 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
     Parameters
     ----------
-    x : array_like broadcastable to (xdim, n_1, n_2, ..., n_xdim) or arguments to np.meshgrid to construct same
+    x : array_like broadcastable to (n_0, n_1, ..., n_(xdim-1), xdim) or 
+        arguments to np.meshgrid to construct same
         Abscissas.
     y : array_like,
-        Ordinates. shape (ydim, n_1, n_2, ..., n_xdim)
+        Ordinates. shape (n_0, n_1, ..., n_(xdim-1),) + yshape
     bcs : (list of) 2-tuples or None
         Boundary conditions. Each 2-tuple specifies the boundary condition as
         (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
