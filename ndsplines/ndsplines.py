@@ -5,6 +5,7 @@ from scipy.linalg import (get_lapack_funcs, LinAlgError, cholesky_banded,
                           cho_solve_banded)
 from scipy.interpolate._bsplines import (prod, _as_float_array,
                                          _bspl as _sci_bspl)
+from scipy.interpolate import _fitpack_impl
 
 from ndsplines import _npy_bspl
 
@@ -161,6 +162,90 @@ class NDSpline(object):
             self.output_op)
 
         return y_out.reshape((x_shape[:-1] + self.yshape))
+
+    def derivative(self, dim, nu=1):
+        """
+        Return `BsplineNDINterpolator` representing the `nu`-th derivative in 
+        the `dim`-th dimension.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension in which to take the derivative. 1-indexed, so 
+            valid dim >= 1, <= self.xdim
+        nu : int, optional
+            Derivative order.
+            Default is 1.
+
+        Returns
+        -------
+        b : BSpline object
+            A new instance with the derivative taken.
+        """
+        coefficients = self.coefficients.copy()
+        orders = self.orders.copy()
+        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:dim],
+            coefficients.shape[dim+1:]], dtype=np.int)
+
+        for idx in np.ndindex(*all_other_ax_shape):
+            offset_axes_remaining_sel = (tuple(idx[dim-1:]))
+            y_line_sel = ((Ellipsis,) + idx[:dim-1] + 
+                (slice(None,None),) + offset_axes_remaining_sel)
+            coeff_line_sel = ((Ellipsis,) + idx[:dim-1] + (slice(None,None),)
+                + offset_axes_remaining_sel)
+            y_slice = coefficients[y_line_sel].squeeze()
+
+            t, c, k = _fitpack_impl.splder((self.knots[dim-1], y_slice, orders[dim-1]), nu)
+            coefficients[coeff_line_sel] = c.T
+
+        if self.squeeze:
+            coefficients = coefficients[0, ...]
+
+        orders[dim-1] = orders[dim-1] + nu
+
+        return BSplineNDInterpolator(self.knots, coefficients, orders, self.periodic, self.extrapolate)
+
+    def antiderivative(self, dim, nu=1):
+        """
+        Return `BsplineNDINterpolator` representing the `nu`-th antiderivative
+        in the `dim`-th dimension.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension in which to take the derivative. 1-indexed.
+        nu : int, optional
+            Derivative order.
+            Default is 1.
+
+        Returns
+        -------
+        b : BSpline object
+            A new instance with the antiderivative taken.
+        """
+        coefficients = self.coefficients.copy()
+        orders = self.orders.copy()
+        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:dim],
+            coefficients.shape[dim+1:]], dtype=np.int)
+
+        for idx in np.ndindex(*all_other_ax_shape):
+            offset_axes_remaining_sel = (tuple(idx[dim-1:]))
+            y_line_sel = ((Ellipsis,) + idx[:dim-1] + 
+                (slice(None,None),) + offset_axes_remaining_sel)
+            coeff_line_sel = ((Ellipsis,) + idx[:dim-1] + (slice(None,None),)
+                + offset_axes_remaining_sel)
+            y_slice = coefficients[y_line_sel].squeeze()
+
+            t, c, k = _fitpack_impl.splantider((self.knots[dim-1], y_slice, orders[dim-1]), nu)
+            coefficients[coeff_line_sel] = c.T
+
+        if self.squeeze:
+            coefficients = coefficients[0, ...]
+
+        orders[dim-1] = orders[dim-1] + nu
+
+        return BSplineNDInterpolator(self.knots, coefficients, orders, self.periodic, self.extrapolate)
+
 
     def to_file(self, file, compress=True):
         """
