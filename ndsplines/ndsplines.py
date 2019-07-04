@@ -55,7 +55,7 @@ class NDSpline(object):
 
         expected_shape = self.xshape - self.orders - 1
         if not np.all(coefficients.shape[:self.xdim] == expected_shape):
-            raise ValueError("Expected coefficients.shape to start with %s, got %s." % (repr(expected_shape), repr(coefficients.shape[:xdim])))
+            raise ValueError("Expected coefficients.shape to start with %s, got %s." % (repr(expected_shape), repr(coefficients.shape[:self.xdim])))
 
         self.yshape = coefficients.shape[self.xdim:]
         self.ydim = prod(self.yshape)
@@ -182,28 +182,44 @@ class NDSpline(object):
         b : BSpline object
             A new instance with the derivative taken.
         """
+        if nu < 0:
+            return self.antiderivative(dim, nu=-nu)
+
+        k = self.orders[dim]
+
+        if nu > k:
+            raise ValueError("Order of derivative nu = %d must be <= order of spline %d for the %d-th dimension" % (nu, k, dim))
+
         coefficients = self.coefficients.copy()
         orders = self.orders.copy()
-        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:dim],
-            coefficients.shape[dim+1:]], dtype=np.int)
+        knots = [knot.copy() for knot in self.knots]
+        t = knots[dim]
+        c_left_selector = [slice(None)]*self.xdim + [...,]
+        c_right_selector = [slice(None)]*self.xdim + [...,]
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
 
-        for idx in np.ndindex(*all_other_ax_shape):
-            offset_axes_remaining_sel = (tuple(idx[dim-1:]))
-            y_line_sel = ((Ellipsis,) + idx[:dim-1] + 
-                (slice(None,None),) + offset_axes_remaining_sel)
-            coeff_line_sel = ((Ellipsis,) + idx[:dim-1] + (slice(None,None),)
-                + offset_axes_remaining_sel)
-            y_slice = coefficients[y_line_sel].squeeze()
+        with np.errstate(invalid='raise', divide='raise'):
+            try:
+                for j in range(nu):
+                    # See e.g. Schumaker, Spline Functions: Basic Theory, Chapter 5
 
-            t, c, k = _fitpack_impl.splder((self.knots[dim-1], y_slice, orders[dim-1]), nu)
-            coefficients[coeff_line_sel] = c.T
+                    # Compute the denominator in the differentiation formula.
+                    # (and append traling dims, if necessary)
+                    dt = (t[k+1:-1] - t[1:-k-1])[dt_shape]
+                    # Compute the new coefficients
+                    c_left_selector[dim] = slice(1,None)
+                    c_right_selector[dim] = slice(0,-1)
+                    coefficients = (coefficients[c_left_selector] - coefficients[c_right_selector]) * k / dt
+                    # Adjust knots
+                    t = t[1:-1]
+                    k -= 1
+            except FloatingPointError:
+                raise ValueError(("The spline has internal repeated knots "
+                                  "and is not differentiable %d times") % n)
+        orders[dim] = k
+        knots[dim] = t
 
-        if self.squeeze:
-            coefficients = coefficients[0, ...]
-
-        orders[dim-1] = orders[dim-1] + nu
-
-        return BSplineNDInterpolator(self.knots, coefficients, orders, self.periodic, self.extrapolate)
+        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), orders, self.periodic, self.extrapolate)
 
     def antiderivative(self, dim, nu=1):
         """
@@ -223,28 +239,32 @@ class NDSpline(object):
         b : BSpline object
             A new instance with the antiderivative taken.
         """
+        if nu < 0:
+            return self.derivative(dim, nu=-nu)
+            
+        k = self.orders[dim]
         coefficients = self.coefficients.copy()
         orders = self.orders.copy()
-        all_other_ax_shape = np.asarray(np.r_[coefficients.shape[1:dim],
-            coefficients.shape[dim+1:]], dtype=np.int)
+        knots = [knot.copy() for knot in self.knots]
+        t = knots[dim]
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
+        left_pad_width = [(0,0)]*dim + [(1,0)] + [(0,0)]*(self.xdim-dim)
+        right_pad_width = [(0,0)]*dim + [(0,2)] + [(0,0)]*(self.xdim-dim)
+        for j in range(nu):
+            dt = (t[k+1:] - t[:-k-1])[dt_shape]
+            # Compute the new coefficients
+            coefficients = np.cumsum(coefficients * dt, axis=dim) / (k+1)
+            coefficients = np.pad(coefficients, left_pad_width, 'constant')
+            # coefficients = np.pad(coefficients, right_pad_width, 'edge')
+            # Adjust knots
+            t = np.r_[t[0], t, t[-1]] 
+            k += 1
+            # right_pad_width[dim] = (0,k)
 
-        for idx in np.ndindex(*all_other_ax_shape):
-            offset_axes_remaining_sel = (tuple(idx[dim-1:]))
-            y_line_sel = ((Ellipsis,) + idx[:dim-1] + 
-                (slice(None,None),) + offset_axes_remaining_sel)
-            coeff_line_sel = ((Ellipsis,) + idx[:dim-1] + (slice(None,None),)
-                + offset_axes_remaining_sel)
-            y_slice = coefficients[y_line_sel].squeeze()
+        orders[dim] = k
+        knots[dim] = t
 
-            t, c, k = _fitpack_impl.splantider((self.knots[dim-1], y_slice, orders[dim-1]), nu)
-            coefficients[coeff_line_sel] = c.T
-
-        if self.squeeze:
-            coefficients = coefficients[0, ...]
-
-        orders[dim-1] = orders[dim-1] + nu
-
-        return BSplineNDInterpolator(self.knots, coefficients, orders, self.periodic, self.extrapolate)
+        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), orders, self.periodic, self.extrapolate)
 
 
     def to_file(self, file, compress=True):
