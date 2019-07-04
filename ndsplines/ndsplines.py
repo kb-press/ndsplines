@@ -52,7 +52,9 @@ class NDSpline(object):
         self.periodic = np.broadcast_to(periodic, (self.xdim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
-        assert np.all(coefficients.shape[:self.xdim] == self.xshape - self.orders - 1)
+        expected_shape = self.xshape - self.orders - 1
+        if not np.all(coefficients.shape[:self.xdim] == expected_shape):
+            raise ValueError("Expected coefficients.shape to start with %s, got %s." % (repr(expected_shape), repr(coefficients.shape[:xdim])))
 
         self.yshape = coefficients.shape[self.xdim:]
         self.ydim = prod(self.yshape)
@@ -335,7 +337,8 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     else:
         raise ValueError("Don't know how to interpret x")
     
-    assert y.shape[:xdim] == x.shape[:xdim]
+    if not np.all(y.shape[:xdim] == x.shape[:xdim]):
+        raise ValueError("Expected y.shape to start with %s, got %s." % (repr(x.shape[:xdim]), repr(y.shape[:xdim])))
 
     yshape = y.shape[xdim:]
     ydim = prod(yshape)

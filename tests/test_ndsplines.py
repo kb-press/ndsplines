@@ -43,7 +43,7 @@ def test_make_interp_invalid_x():
 
 def test_make_interp_invalid_y():
     """Bad input raises ValueError."""
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         ndsplines.make_interp_spline(np.arange(10), np.zeros((9, 10, 10, 10)))
 
 
