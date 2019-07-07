@@ -1,7 +1,7 @@
 """
-===========================
-2-Dimensional Tidy Interpolation
-===========================
+=========================================
+2-Dimensional Interpolation of Tidy  Data
+=========================================
 """
 
 import numpy as np

@@ -43,8 +43,8 @@ class NDSpline(object):
     ----------
 
     knots : list of ndarrays,
-        shapes=[n_1+orders[i-1]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
-    coefficients : ndarray, shape=(ydim, n_1, n_2, ..., n_xdim), dtype=np.float_
+        shapes=[n_0+orders[i]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=np.float_
     orders : ndarray, shape=(xdim,), dtype=np.int_
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
@@ -140,10 +140,15 @@ class NDSpline(object):
         """
         Parameters
         ----------
-        x : ndarray, shape=(..., self.xdim) dtype=np.float_
+        x : ndarray, dtype=np.float_, shape[-1] = self.xdim
             Point(s) to evaluate spline on. Output will be (..., self.yshape)
         nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
             Order of derivative(s) for each dimension to evaluate
+
+        Returns
+        -------
+        y : ndarray, shape[] + self.yshape dtype=np.float_
+            
 
         """
         if not isinstance(x, np.ndarray):
@@ -174,7 +179,7 @@ class NDSpline(object):
 
     def derivative(self, dim, nu=1):
         """
-        Return `BsplineNDINterpolator` representing the `nu`-th derivative in 
+        Return `NDSpline` representing the `nu`-th derivative in 
         the `dim`-th dimension.
 
         Parameters
@@ -232,7 +237,7 @@ class NDSpline(object):
 
     def antiderivative(self, dim, nu=1):
         """
-        Return `BsplineNDINterpolator` representing the `nu`-th antiderivative
+        Return `NDSpline` representing the `nu`-th antiderivative
         in the `dim`-th dimension.
 
         Parameters

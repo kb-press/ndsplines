@@ -1,6 +1,6 @@
 """
 ==================================
-1D ndsplines vs. scipy.interpolate
+2D ndsplines vs. scipy.interpolate
 ==================================
 """
 
