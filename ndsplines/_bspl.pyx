@@ -1,5 +1,5 @@
 """
-Routines for evaluating and manipulating B-splines.
+Routines for evaluating B-splines.
 
 """
 
@@ -94,13 +94,13 @@ cdef inline int find_interval(const double[::1] t,
 @cython.cdivision(True)
 def evaluate_spline(const double[::1] t,
              int k,
-             const double[::1] xp,
+             const double[::1] xvals,
              int nu,
              bint extrapolate,
              int[::1] interval_workspace,
              double[:, ::1] basis_workspace):
     """
-    Evaluate a spline in the B-spline basis.
+    Evaluate the k+1 non-zero B-spline basis functions for xvals.
 
     Parameters
     ----------
@@ -108,17 +108,17 @@ def evaluate_spline(const double[::1] t,
         knots
     k : int
         spline order
-    xp : ndarray, shape (s,)
+    xvals : ndarray, shape (s,)
         Points to evaluate the spline at.
     nu : int
         Order of derivative to evaluate.
     extrapolate : int, optional
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
     interval_workspace : ndarray, shape (s,), dtype=int
-        Array of identified intervals
+        Array used to return identified intervals, modified in-place.
     basis_workspace : ndarray, shape (s, 2*k+3), dtype=float
-        Computed values of the spline basis function at each of the input 
-        points. This argument is modified in-place.
+        Array used to return computed values of the k+1 spline basis function
+        at each of the input points
 
     """
 
@@ -127,11 +127,11 @@ def evaluate_spline(const double[::1] t,
     cdef double xval
 
     # shape checks
-    if interval_workspace.shape[0] < xp.shape[0]:
-        raise ValueError("interval_workspace and xp have incompatible shapes")
-    if basis_workspace.shape[0] < xp.shape[0]:
-        raise ValueError("basis_workspace and xp have incompatible shapes")
-    if basis_workspace.shape[1] != 2*k+3:
+    if interval_workspace.shape[0] < xvals.shape[0]:
+        raise ValueError("interval_workspace and xvals have incompatible shapes")
+    if basis_workspace.shape[0] < xvals.shape[0]:
+        raise ValueError("basis_workspace and xvals have incompatible shapes")
+    if basis_workspace.shape[1] < 2*k+3:
         raise ValueError("basis_workspace and k have incompatible shapes")
 
     # check derivative order
@@ -141,8 +141,8 @@ def evaluate_spline(const double[::1] t,
     # evaluate
     with nogil:
         interval = k
-        for ip in range(xp.shape[0]):
-            xval = xp[ip]
+        for ip in range(xvals.shape[0]):
+            xval = xvals[ip]
 
             # Find correct interval
             interval = find_interval(t, k, xval, interval, extrapolate)

@@ -50,6 +50,6 @@ setup(
     install_requires=['numpy', 'scipy'],
     extras_require={
         'examples': ['matplotlib'],
-        'docs': ['sphinx', 'sphinx_gallery', 'numpydoc'],
+        'docs': ['sphinx', 'sphinx_gallery']
     },
 )

@@ -12,16 +12,6 @@ __all__ = ['pinned', 'clamped', 'notaknot', 'NDSpline',
            'make_interp_spline', 'make_lsq_spline',
            'make_interp_spline_from_tidy', 'from_file']
 
-"""
-TODOs:
-
-
-create wrapper with callback to allow for creating anti-derivative splines, etc
-(use 1D operations that can be iterated over )
-
-
-"""
-
 # boundary conditions: order of derivative, value of derivative
 clamped = np.array([1, 0.0])
 pinned = np.array([2, 0.0])
@@ -41,10 +31,10 @@ class NDSpline(object):
 
     Parameters
     ----------
-
     knots : list of ndarrays,
         shapes=[n_0+orders[i]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
-    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=np.float_
+    coefficients : ndarray, 
+        shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=np.float_
     orders : ndarray, shape=(xdim,), dtype=np.int_
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
@@ -69,8 +59,6 @@ class NDSpline(object):
         self.yshape = coefficients.shape[self.xdim:]
         self.ydim = prod(self.yshape)
         self.coefficients = coefficients.reshape( tuple(self.xshape - self.orders - 1,) + (self.ydim,))
-
-        
 
         self.coefficient_op = list(i for i in range(self.xdim+2))
         self.u_ops = [[self.xdim, i] for i in range(self.xdim)]
@@ -140,15 +128,10 @@ class NDSpline(object):
         """
         Parameters
         ----------
-        x : ndarray, dtype=np.float_, shape[-1] = self.xdim
+        x : ndarray, shape=(..., self.xdim) dtype=np.float_
             Point(s) to evaluate spline on. Output will be (..., self.yshape)
         nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
             Order of derivative(s) for each dimension to evaluate
-
-        Returns
-        -------
-        y : ndarray, shape[] + self.yshape dtype=np.float_
-            
 
         """
         if not isinstance(x, np.ndarray):
@@ -179,8 +162,8 @@ class NDSpline(object):
 
     def derivative(self, dim, nu=1):
         """
-        Return `NDSpline` representing the `nu`-th derivative in 
-        the `dim`-th dimension.
+        Return `NDSpline` representing the `nu`-th derivative in the `dim`-th
+        dimension.
 
         Parameters
         ----------
@@ -237,8 +220,8 @@ class NDSpline(object):
 
     def antiderivative(self, dim, nu=1):
         """
-        Return `NDSpline` representing the `nu`-th antiderivative
-        in the `dim`-th dimension.
+        Return `NDSpline` representing the `nu`-th antiderivative in the 
+        `dim`-th dimension.
 
         Parameters
         ----------
@@ -424,21 +407,7 @@ def _augknt(x, k, left=True, right=True):
 
 
 def make_interp_spline(x, y, bcs=0, orders=3):
-    r"""
-    Construct an interpolating B-spline.
-
-    The basic idea of (tensor product) interpolating splines is that (in each
-    dimension) you have a :math:`n` (or :math:`n_j`, with :math:`j=1,\ldots,N` 
-    indicating the dimension) samples of possibly un-evenly spaced data 
-    :math:`(t_i, y_i=f(t_i))`  (so multi-dimensional data can be rectangular but
-    not unstructured). A B-spline is a piecewise :math:`k`-th (:math:`k_j`-th) 
-    order polynomial interpolant that can be constructed with nice properties 
-    such as :math:`C^{k-1}` continuity. The B-Spline interpolant is represented
-    by :math:`n+k+1` knots, which for interpolating splines are 
-    essentially the points :math:`t_i` where the function is sampled, with 
-    :math:`k+1` extra points that are determined by the desired properties at 
-    the ends of the interpolant, and :math:`n` coefficients which are the 
-    projection of the :math:`y_i` data onto the B-spline basis functions.
+    """Construct an interpolating B-spline.
 
     Parameters
     ----------

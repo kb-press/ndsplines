@@ -4,14 +4,13 @@
 ===========================
 """
 
+import ndsplines
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import interpolate
 from scipy.stats import norm
-
 import itertools
 
-import ndsplines
 
 def gaussian(x_in):
     z = norm.ppf(.9995)
