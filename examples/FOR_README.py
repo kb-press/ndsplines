@@ -1,3 +1,10 @@
+"""
+=========================================
+Tutorial for basic usage 
+=========================================
+"""
+
+
 import ndsplines
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,9 +15,9 @@ y = np.array([-1, -1/2, 0, 1/2, 1])
 meshx, meshy = np.meshgrid(x, y, indexing='ij')
 gridxy = np.stack((meshx, meshy), axis=-1)
 
-sparse_dense = 2**7
 
 # generate denser grid of independent variables to interpolate
+sparse_dense = 2**7
 xx = np.concatenate([np.linspace(x[i], x[i+1], sparse_dense) for i in range(x.size-1)]) # np.linspace(x[0], x[-1], x.size*sparse_dense)
 yy = np.concatenate([np.linspace(y[i], y[i+1], sparse_dense) for i in range(y.size-1)]) # np.linspace(y[0], y[-1], y.size*sparse_dense)
 gridxxyy = np.stack(np.meshgrid(xx, yy, indexing='ij'), axis=-1)
@@ -35,9 +42,10 @@ def plots(sparse_data, dense_data, ylabel='f(x,y)'):
 # evaluate a function to interpolate over input grid
 meshf = np.sin(meshx) * (meshy-3/8)**2 + 2
 
+# create the interpolating splane
 interp = ndsplines.make_interp_spline(gridxy, meshf)
 
-
+# evaluate spline over denser grid
 meshff = interp(gridxxyy)
 
 
@@ -71,32 +79,7 @@ axes[1].legend()
 axes[1].set_xlabel('$y$')
 # plt.ylabel(r'$\frac{\partial f(x,y)}{\partial y}$')
 plt.show()
-##
 
-# plot
-fig, axes = plt.subplots(constrained_layout=True)
-for yidx in range(meshf.shape[1]):
-    plt.plot(x, meshf[:, yidx], 'o', color='C%d'%yidx, label='y=%.1f'%y[yidx])
-    plt.plot(xx, meshff[:, yidx], color='C%d'%yidx)
-plt.legend()
-plt.xlabel('$x$')
-plt.ylabel('$f(x,y)$')
-plt.show()
-
-# y-dir plot
-yy = np.linspace(y[0], y[-1], 1024)
-gridxyy = np.stack(np.meshgrid(x, yy, indexing='ij'), axis=-1)
-
-meshff = interp(gridxyy)
-fig, axes = plt.subplots(constrained_layout=True)
-for xidx in range(meshf.shape[0]//2):
-    plt.plot(yy, meshff[xidx*1+3, :], '--', color='C%d'%xidx, label='x=%.1f'%x[xidx*1+3])
-    plt.plot(y, meshf[xidx*1+3, :], 'o', color='C%d'%xidx)
-    
-plt.legend()
-plt.xlabel('$y$')
-plt.ylabel(r'$\frac{\partial f(x,y)}{\partial y}$')
-plt.show()
 ##
 
 # we could also use tidy data format to make the grid
@@ -113,8 +96,6 @@ print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(
 ##
 # two ways to evaluate derivative - y direction
 
-
-
 deriv_interp = interp.derivative(1)
 deriv1 = deriv_interp(gridxy)
 deriv2 = interp(gridxxyy, nus=np.array([0,1]))
@@ -122,32 +103,15 @@ deriv2 = interp(gridxxyy, nus=np.array([0,1]))
 plots(deriv1, deriv2, r'$\frac{\partial f(x,y)}{\partial y}$')
 
 ##
-
-fig, axes = plt.subplots(constrained_layout=True)
-for xidx in range(meshf.shape[0]//2):
-    plt.plot(yy, deriv1[xidx*1+3, :], '--', color='C%d'%xidx, label='x=%.1f'%x[xidx*1+3])
-    plt.plot(y, deriv2[xidx*1+3, :], 'o', color='C%d'%xidx)
-    
-plt.legend()
-plt.xlabel('$y$')
-plt.ylabel(r'$\frac{\partial f(x,y)}{\partial y}$')
-plt.show()
-##
 # two ways to evaluate derivatives x-direction: create a derivative spline or call with nus:
 deriv_interp = interp.derivative(0)
-deriv1 = deriv_interp(gridxxy)
-deriv2 = interp(gridxy, nus=np.array([1,0]))
+deriv1 = deriv_interp(gridxy)
+deriv2 = interp(gridxxyy, nus=np.array([1,0]))
 
-fig, axes = plt.subplots(constrained_layout=True)
-for yidx in range(meshf.shape[1]):
-    plt.plot(xx, deriv1[:, yidx], '--', color='C%d'%yidx, label='y=%.1f'%y[yidx])
-    plt.plot(x, deriv2[:, yidx], 'o', color='C%d'%yidx)
-    
-plt.legend()
-plt.xlabel('$x$')
-plt.ylabel(r'$\frac{\partial f(x,y)}{\partial x}$')
-plt.show()
+plots(deriv1, deriv2, r'$\frac{\partial f(x,y)}{\partial x}$')
 ##
+
+# Calculus demonstration
 interp1 = deriv_interp.antiderivative(0)
 coeff_diff = interp1.coefficients - interp.coefficients
 print("\nAntiderivative of derivative:\n","Coefficients differ by constant?", np.allclose(interp1.coefficients+2.0, interp.coefficients))
