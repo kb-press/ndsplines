@@ -78,7 +78,7 @@ class NDSpline(object):
             self.basis_workspace = np.empty((
                 self.xdim,
                 self.current_max_num_points,
-                2*self.max_order+3,
+                2*self.max_order+2,
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
             self.coefficient_selector = np.empty((self.current_max_num_points,) + self.coefficient_shape_base, dtype=np.intc)

@@ -116,7 +116,7 @@ def evaluate_spline(const double[::1] t,
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
     interval_workspace : ndarray, shape (s,), dtype=int
         Array used to return identified intervals, modified in-place.
-    basis_workspace : ndarray, shape (s, 2*k+3), dtype=float
+    basis_workspace : ndarray, shape (s, 2*k+2), dtype=float
         Array used to return computed values of the k+1 spline basis function
         at each of the input points
 
@@ -131,7 +131,7 @@ def evaluate_spline(const double[::1] t,
         raise ValueError("interval_workspace and xvals have incompatible shapes")
     if basis_workspace.shape[0] < xvals.shape[0]:
         raise ValueError("basis_workspace and xvals have incompatible shapes")
-    if basis_workspace.shape[1] < 2*k+3:
+    if basis_workspace.shape[1] < 2*k+2:
         raise ValueError("basis_workspace and k have incompatible shapes")
 
     # check derivative order

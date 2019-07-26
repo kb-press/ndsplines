@@ -80,7 +80,7 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
     interval_workspace : ndarray, shape (s,), dtype=int
         Array used to return identified intervals, modified in-place.
-    basis_workspace : ndarray, shape (s, 2*k+3), dtype=float
+    basis_workspace : ndarray, shape (s, 2*k+2), dtype=float
         Array used to return computed values of the k+1 spline basis function
         at each of the input points
 
@@ -100,23 +100,26 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
             (interval_workspace.shape[0] < s)):
         raise ValueError("interval_workspace has invalid shape or dtype")
     ell = find_interval(t, k, xvals, extrapolate)
-
-    workspace = basis_workspace.T
-
+    
+    
+    basis_workspace = basis_workspace.T
     do_return = False
     if (not isinstance(basis_workspace, np.ndarray) or 
             (basis_workspace.dtype != np.float_) or
-            (basis_workspace.shape[0] < 2*k+3) or
+            (basis_workspace.shape[0] < 2*k+2) or
             (basis_workspace.shape[1] < s)):
         raise ValueError("basis_workspace has invalid shape or dtype")
 
     u = basis_workspace[:k+1,:s]
-    w = basis_workspace[k+1:2*k+1,:s]
-    bounds = basis_workspace[2*k+1:2*k+3,:s]
+    w = basis_workspace[k+1:2*k+2,:s]
+    bounds = np.empty((2,s), dtype=np.float_)
     
-    w[0,...] = 1.0
-    for j in range(1, k-nu+1):
+    if k > 0:
+        w[0,...] = 1.0
+    else:
+        u[0,...] = 1.0
 
+    for j in range(1, k-nu+1):
         u[0,:] = 0
         for n in range(1, j+1):
             index = ell+n
@@ -133,9 +136,8 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
             tau = w[n-1, neq_test]/(xb-xa)
             u[n-1, neq_test] += tau*(xb - xx)
             u[n, neq_test] = tau*(xx - xa)
-            
-        # w[:j] = u[:j]
-        w[:] = u[:k].copy()
+
+        w[:k] = u[:k].copy()
 
     for j in range(k-nu+1, k+1):
         u[0,:] = 0
@@ -153,7 +155,7 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
             u[n-1, neq_test] -= tau
             u[n, neq_test] = tau
 
-        w[:] = u[:k].copy()
+        w[:k] = u[:k].copy()
 
     interval_workspace[:s] = ell - k
 
