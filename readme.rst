@@ -26,7 +26,7 @@ or from source::
 Note: In order to use the C implementation, the system must have a C compiler 
 configured before installing ndsplines. If installing from source, to use the C
 implementation, install with the ``build_ext`` feature (i.e., ``$ pip install 
-.[build_ext]``) or install Cython (i.e., ``$ pip install .[build_ext]``) before 
+.[build_ext]``) or install Cython (i.e., ``$ pip install cython``) before 
 installing ``ndsplines``.
 
 .. _Splines: https://ndsplines.readthedocs.io/en/latest/math.html
