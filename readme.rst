@@ -19,7 +19,7 @@ Install ndsplines with pip::
 
 or from source::
 
-    $ git clone https://github.com/sixpearls/ndsplines
+    $ git clone https://github.com/kb-press/ndsplines
     $ cd ndsplines
     $ pip install .
 
