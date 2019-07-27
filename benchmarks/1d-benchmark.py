@@ -59,7 +59,7 @@ for i, size in enumerate(x_sizes):
 
 # spline query timing
 x, y = gen_xy(7)
-xx_sizes = np.logspace(2, 4, 10, dtype=int)
+xx_sizes = np.logspace(0, 3, 10, dtype=int)
 t_scipy_call = np.empty((2, xx_sizes.size))
 t_ndspl_npy_call = np.empty((2, xx_sizes.size))
 t_ndspl_pyx_call = np.empty((2, xx_sizes.size))
