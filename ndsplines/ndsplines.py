@@ -8,7 +8,7 @@ from scipy.interpolate._bsplines import (prod, _as_float_array,
 
 from ndsplines import _npy_bspl
 
-__all__ = ['pinned', 'clamped', 'notaknot', 'NDSpline',
+__all__ = ['pinned', 'clamped', 'notaknot', 'impl', 'NDSpline',
            'make_interp_spline', 'make_lsq_spline',
            'make_interp_spline_from_tidy', 'from_file']
 
@@ -16,6 +16,8 @@ __all__ = ['pinned', 'clamped', 'notaknot', 'NDSpline',
 clamped = np.array([1, 0.0])
 pinned = np.array([2, 0.0])
 notaknot = np.array([0, 0.0])
+
+impl = _npy_bspl
 
 
 class NDSpline(object):
@@ -39,8 +41,6 @@ class NDSpline(object):
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
     """
-
-    impl = _npy_bspl
 
     def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
         self.knots = knots
@@ -114,7 +114,7 @@ class NDSpline(object):
                 extrapolate_flag = True
 
 
-            self.impl.evaluate_spline(t, k, x[:,i], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            impl.evaluate_spline(t, k, x[:,i], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][None, ...],
                 # Broadcasting does not play nciely with xdim as last axis for some reason,
