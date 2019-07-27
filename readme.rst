@@ -37,14 +37,14 @@ Usage
 
 The easiest way to use ``ndsplines`` is to use one of the ``make_*`` 
 functions, ``make_interp_spline``, ``make_interp_spline_from_tidy``, or 
-``make_lsq_spline``, which return a ``NDSpline`` object which can be used to
-evaluate the spline.
+``make_lsq_spline``, which return an ``NDSpline`` object which can be used to
+evaluate the spline. For example, suppose we have data over a two-dimensional
+mesh.
 
 .. code:: python
 
     import ndsplines
     import numpy as np
-    import matplotlib.pyplot as plt
 
     # generate grid of independent variables
     x = np.array([-1, -7/8, -3/4, -1/2, -1/4, -1/8, 0, 1/8, 1/4, 1/2, 3/4, 7/8, 1])*np.pi
@@ -56,7 +56,8 @@ evaluate the spline.
     meshf = np.sin(meshx) * (meshy-3/8)**2 + 2
 
 
-We can then use ``make_interp_spline`` to create an interpolating spline
+We can then use ``make_interp_spline`` to create an interpolating spline and
+evaluate it over a denser mesh.
 
 .. code:: python
 
@@ -73,7 +74,10 @@ We can then use ``make_interp_spline`` to create an interpolating spline
     meshff = interp(gridxxyy)
 
 
-Generally, we construct data so that the first `ndim` axes index the independent variables and the remaining axes index output. This is a generalization of using rows to index time and columns to index output variables for We can also create an interpolating spline frm a tidy data format:
+Generally, we construct data so that the first `ndim` axes index the independent 
+variables and the remaining axes index output. This is a generalization of using
+rows to index time and columns to index output variables for We can also create
+an interpolating spline frm a tidy data format:
 
 .. code:: python
 
@@ -85,11 +89,18 @@ Generally, we construct data so that the first `ndim` axes index the independent
     print("\nCoefficients all same?", np.all(tidy_interp.coefficients == interp.coefficients))
     print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(tidy_interp.knots, interp.knots)]))
 
-Note however, that the tidy dataset must be over a structured rectangular grid equivalent to the N-dimensional representation. Also note that Pandas dataframes can be used, in which case lists of column names can be used instead of lists of column indices. 
+Note however, that the tidy dataset must be over a structured rectangular grid 
+equivalent to the N-dimensional representation. Also note that Pandas dataframes
+can be used, in which case lists of column names can be used instead of lists of
+column indices. 
 
-To see examples for creating least-squares regression splines with ``make_lsq_spline``, see the `1D example`_ and `2D example`_. 
+To see examples for creating least-squares regression splines 
+with ``make_lsq_spline``, see the `1D example`_ and `2D example`_. 
 
-Derivatives of constructed splines can be evaluated in two ways. First by using the `nus` parameter while calling the interpolator or by creating a new spline with the ``derivative`` function. In this codeblock, we show both methods of evaluating derivatives in each direction.
+Derivatives of constructed splines can be evaluated in two ways. First by using
+the `nus` parameter while calling the interpolator or by creating a new spline 
+with the ``derivative`` function. In this codeblock, we show both methods of 
+evaluating derivatives in each direction.
 
 .. code:: python
 
@@ -103,7 +114,8 @@ Derivatives of constructed splines can be evaluated in two ways. First by using 
     deriv1 = deriv_interp(gridxy)
     deriv2 = interp(gridxxyy, nus=np.array([0,1]))
 
-The ``NDSpline`` class also has an ``antiderivative`` method for creating a spline representative of the anti-derivative in the specified direction.
+The ``NDSpline`` class also has an ``antiderivative`` method for creating a 
+spline representative of the anti-derivative in the specified direction.
 
 .. code:: python
 
@@ -124,7 +136,7 @@ The ``NDSpline`` class also has an ``antiderivative`` method for creating a spli
 
 
 Contributing
-============
+------------
 
 Please feel free to share any thoughts or opinions about the design and
 implementation of this software by `opening an issue on GitHub
@@ -142,7 +154,7 @@ you are new to contributing, it is perfectly fine to open a work-in-progress
 pull request and have it iteratively reviewed.
 
 Testing
--------
+=======
 
 To test, install the developer requirements and use ``pytest``::
 
@@ -151,7 +163,7 @@ To test, install the developer requirements and use ``pytest``::
     $ pytest
 
 Documentation
--------------
+=============
 
 To build the docs, install the ``docs`` feature requirements (a subset of
 the developer requirements above)::
