@@ -73,6 +73,14 @@ class NDSpline(object):
         self.u_arg = [subarg for arg in zip(self.basis_workspace, self.u_ops) for subarg in arg]
 
     def allocate_workspace_arrays(self, num_points):
+        """
+        Allocate workspace arrays for B-spline evaluation.
+
+        Parameters
+        ----------
+        num_points : int
+            the number of evaluation points to allocate.
+        """
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
             self.basis_workspace = np.empty((
@@ -85,6 +93,8 @@ class NDSpline(object):
 
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
+        Evaluate the B-spline basis functions and coefficient selectors.
+
         Parameters
         ----------
         x : ndarray, shape=(s, self.xdim,) dtype=np.float_
@@ -126,6 +136,8 @@ class NDSpline(object):
 
     def __call__(self, x, nus=0):
         """
+        Evaluate the N-dimensional B-spline.
+
         Parameters
         ----------
         x : ndarray, shape=(..., self.xdim) dtype=np.float_

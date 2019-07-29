@@ -1,3 +1,7 @@
+"""
+NumPy implementation for evaluating B-splines.
+
+"""
 import numpy as np
 
 def find_interval(t, k, xvals, extrapolate=False, workspace=None):

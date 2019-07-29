@@ -1,5 +1,5 @@
 """
-Routines for evaluating B-splines.
+Cython implementation for evaluating B-splines.
 
 """
 
