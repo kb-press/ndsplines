@@ -74,7 +74,7 @@ class NDSpline(object):
 
     def allocate_workspace_arrays(self, num_points):
         """
-        Allocate workspace arrays for B-spline evaluation.
+        Allocate workspace arrays for the N-dimensional B-spline evaluation.
 
         Parameters
         ----------
@@ -93,7 +93,8 @@ class NDSpline(object):
 
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
-        Evaluate the B-spline basis functions and coefficient selectors.
+        Evaluate the N-dimensional B-spline basis functions and coefficient 
+        selectors.
 
         Parameters
         ----------
@@ -281,9 +282,6 @@ class NDSpline(object):
         Save attributes of `NDSpline` to a binary file in NumPy 
         ``.npz`` format.
 
-        Saves knots in order with file name "knots_%d" where %d is the dimension
-        of the input space.
-
         Parameters
         ----------
         file : file, str, or pathlib.Path
@@ -293,6 +291,12 @@ class NDSpline(object):
             have one.
         compress : bool, optional
             Whether to compress the archive of attributes.
+
+        Notes
+        -----
+        Saves knots in order with name "knots_%d" where %d is the dimension
+        of the input space.
+
         """
         to_save_dict = {}
         for idx, knot in zip(range(self.xdim), self.knots):
@@ -315,15 +319,18 @@ def from_file(file):
     Create a `NDSpline` object from a NumPy archive containing the
     necessary attributes.
 
-    Assumes knots are saved in order with file names"knots_%d" where %d is 
-    the dimension of the input space.
-
     Parameters
     ----------
     file : file-like object, string, or pathlib.Path
         The file to read. File-like objects must support the
         ``seek()`` and ``read()`` methods. Pickled files require that the
         file-like object support the ``readline()`` method as well.
+
+    Notes
+    -----
+    Assumes knots are saved in order with names "knots_%d" where %d is 
+    the dimension of the input space.
+
     """
     with np.load(file) as data:
         coefficients = data['coefficients']
@@ -352,16 +359,8 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
         then weights are all equal.
         Default is ``None``.
 
-    Notes
-    -----
-    I construct the observation matrix A, so that A@c = y
-    I am not being particularly careful about structure, sparcity, etc. because
-    I am assuming a small number of knots relative to the number of data points
-    and sufficient speed from the numpy linear algebra library (i.e., MKL) to
-    make it unnoticeable.
-
-
     """
+
     if x.ndim == 1:
         x = x[:, None]
     xdim = x.shape[1]
@@ -437,9 +436,6 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
     degrees : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable).
 
-    Notes
-    -----
-    Special case boundary condition - for k=0,
     """
     if isinstance(x, np.ndarray):  # mesh
         if x.ndim == 1:
@@ -692,7 +688,7 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
     sorted_data = tidy_data[sort_indices, :]
     meshgrid_data = sorted_data.reshape(
             meshgrid_shape
-        )# np.moveaxis(, -1, 0)
+        )
 
     xdata = meshgrid_data[..., input_vars]
     ydata = meshgrid_data[..., output_vars]
