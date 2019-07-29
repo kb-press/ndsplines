@@ -34,38 +34,38 @@ class NDSpline(object):
     Parameters
     ----------
     knots : list of ndarrays,
-        shapes=[n_0+orders[i]+1, ..., n_ndim+orders[-1]+1], dtype=np.float_
+        shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
     coefficients : ndarray, 
         shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=np.float_
-    orders : ndarray, shape=(xdim,), dtype=np.int_
+    degrees : ndarray, shape=(xdim,), dtype=np.int_
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
     """
 
-    def __init__(self, knots, coefficients, orders, periodic=False, extrapolate=True):
+    def __init__(self, knots, coefficients, degrees, periodic=False, extrapolate=True):
         self.knots = knots
         self.xdim = len(knots) # dimension of knots
         self.xshape = tuple(knot.size for knot in knots)
         
-        self.orders = np.broadcast_to(orders, (self.xdim,))
-        self.max_order = np.max(self.orders)
+        self.degrees = np.broadcast_to(degrees, (self.xdim,))
+        self.max_degree = np.max(self.degrees)
         self.periodic = np.broadcast_to(periodic, (self.xdim,))
         self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
-        expected_shape = self.xshape - self.orders - 1
+        expected_shape = self.xshape - self.degrees - 1
         if not np.all(coefficients.shape[:self.xdim] == expected_shape):
             raise ValueError("Expected coefficients.shape to start with %s, got %s." % (repr(expected_shape), repr(coefficients.shape[:self.xdim])))
 
         self.yshape = coefficients.shape[self.xdim:]
         self.ydim = prod(self.yshape)
-        self.coefficients = coefficients.reshape( tuple(self.xshape - self.orders - 1,) + (self.ydim,))
+        self.coefficients = coefficients.reshape( tuple(self.xshape - self.degrees - 1,) + (self.ydim,))
 
         self.coefficient_op = list(i for i in range(self.xdim+2))
         self.u_ops = [[self.xdim, i] for i in range(self.xdim)]
         self.output_op = [self.xdim, self.xdim+1]
 
-        self.coefficient_selector_base = np.meshgrid(*[np.arange(order+1) for order in self.orders], indexing='ij')
-        self.coefficient_shape_base = tuple(self.orders+1) + (self.xdim,)
+        self.coefficient_selector_base = np.meshgrid(*[np.arange(degree+1) for degree in self.degrees], indexing='ij')
+        self.coefficient_shape_base = tuple(self.degrees+1) + (self.xdim,)
 
         self.current_max_num_points = 0
         self.allocate_workspace_arrays(1)
@@ -86,7 +86,7 @@ class NDSpline(object):
             self.basis_workspace = np.empty((
                 self.xdim,
                 self.current_max_num_points,
-                2*self.max_order+2,
+                2*self.max_degree+2,
             ), dtype=np.float_)
             self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
             self.coefficient_selector = np.empty((self.current_max_num_points,) + self.coefficient_shape_base, dtype=np.intc)
@@ -107,7 +107,7 @@ class NDSpline(object):
 
         for i in range(self.xdim):
             t = self.knots[i]
-            k = self.orders[i]
+            k = self.degrees[i]
             if isinstance(nus, np.ndarray):
                 nu = nus[i]
             if self.periodic[i]:
@@ -132,7 +132,7 @@ class NDSpline(object):
                 self.interval_workspace[i][(slice(0,num_points),) + (None,)*self.xdim],
                 out=self.coefficient_selector[:num_points, ..., i])
 
-            self.u_arg[2*i] = self.basis_workspace[i, :num_points, :self.orders[i]+1]
+            self.u_arg[2*i] = self.basis_workspace[i, :num_points, :self.degrees[i]+1]
 
     def __call__(self, x, nus=0):
         """
@@ -194,13 +194,13 @@ class NDSpline(object):
         if nu < 0:
             return self.antiderivative(dim, nu=-nu)
 
-        k = self.orders[dim]
+        k = self.degrees[dim]
 
         if nu > k:
-            raise ValueError("Order of derivative nu = %d must be <= order of spline %d for the %d-th dimension" % (nu, k, dim))
+            raise ValueError("Order of derivative nu = %d must be <= degree of spline %d for the %d-th dimension" % (nu, k, dim))
 
         coefficients = self.coefficients.copy()
-        orders = self.orders.copy()
+        degrees = self.degrees.copy()
         knots = [knot.copy() for knot in self.knots]
         t = knots[dim]
         c_left_selector = [slice(None)]*self.xdim + [...,]
@@ -225,10 +225,10 @@ class NDSpline(object):
             except FloatingPointError:
                 raise ValueError(("The spline has internal repeated knots "
                                   "and is not differentiable %d times") % n)
-        orders[dim] = k
+        degrees[dim] = k
         knots[dim] = t
 
-        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), orders, self.periodic, self.extrapolate)
+        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), degrees, self.periodic, self.extrapolate)
 
     def antiderivative(self, dim, nu=1):
         """
@@ -251,9 +251,9 @@ class NDSpline(object):
         if nu < 0:
             return self.derivative(dim, nu=-nu)
             
-        k = self.orders[dim]
+        k = self.degrees[dim]
         coefficients = self.coefficients.copy()
-        orders = self.orders.copy()
+        degrees = self.degrees.copy()
         knots = [knot.copy() for knot in self.knots]
         t = knots[dim]
         dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
@@ -270,10 +270,10 @@ class NDSpline(object):
             k += 1
             # right_pad_width[dim] = (0,k)
 
-        orders[dim] = k
+        degrees[dim] = k
         knots[dim] = t
 
-        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), orders, self.periodic, self.extrapolate)
+        return self.__class__(knots, coefficients.reshape(coefficients.shape[:self.xdim] + self.yshape), degrees, self.periodic, self.extrapolate)
 
 
     def to_file(self, file, compress=True):
@@ -300,7 +300,7 @@ class NDSpline(object):
         to_save_dict['coefficients'] = self.coefficients
         if self.squeeze:
             to_save_dict['coefficients'] = self.coefficients[0, ...]
-        to_save_dict['orders'] = self.orders
+        to_save_dict['degrees'] = self.degrees
         to_save_dict['periodic'] = self.periodic
         to_save_dict['extrapolate'] = self.extrapolate
 
@@ -327,14 +327,14 @@ def from_file(file):
     """
     with np.load(file) as data:
         coefficients = data['coefficients']
-        orders = data['orders']
+        degrees = data['degrees']
         periodic = data['periodic']
         extrapolate = data['extrapolate']
         knots = [ data[key] for key in data.keys() if key.startswith("knots_") ]
-    return NDSpline(knots, coefficients, orders, periodic, extrapolate)
+    return NDSpline(knots, coefficients, degrees, periodic, extrapolate)
 
 
-def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
+def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     """
     Construct a least squares regression B-spline.
 
@@ -344,9 +344,9 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
         Abscissas.
     y : array_like, shape (num_points, ydim)
         Ordinates.
-    knots : iterable of array_like, shape (n_1 + orders[0] + 1,), ... (n_xdim, + orders[-1] + 1)
+    knots : iterable of array_like, shape (n_1 + degrees[0] + 1,), ... (n_xdim, + degrees[-1] + 1)
         Knots and data points must satisfy Schoenberg-Whitney conditions.
-    orders : ndarray, shape=(xdim,), dtype=np.int_                           
+    degrees : ndarray, shape=(xdim,), dtype=np.int_                           
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
         then weights are all equal.
@@ -373,9 +373,9 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
 
     # make slices c-contiguous
     x = np.ascontiguousarray(x.T, dtype=np.float_).T
-    knot_shapes = tuple(knot.size - order - 1 for knot, order in zip(knots, orders))
+    knot_shapes = tuple(knot.size - degree - 1 for knot, degree in zip(knots, degrees))
 
-    temp_spline = NDSpline(knots, np.empty(knot_shapes + yshape), orders)
+    temp_spline = NDSpline(knots, np.empty(knot_shapes + yshape), degrees)
     temp_spline.allocate_workspace_arrays(num_points)
     temp_spline.compute_basis_coefficient_selector(x)
 
@@ -389,7 +389,7 @@ def make_lsq_spline(x, y, knots, orders, w=None, check_finite=True):
     lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y, rcond=None)
 
     temp_spline.coefficients = lsq_coefficients.reshape(knot_shapes + yshape)
-    temp_spline = NDSpline(knots, lsq_coefficients.reshape(knot_shapes + yshape), orders)
+    temp_spline = NDSpline(knots, lsq_coefficients.reshape(knot_shapes + yshape), degrees)
 
     # TODO: I think people will want this matrix, is there a better way to give this to a user?
     temp_spline.observation_matrix = observation_matrix
@@ -418,7 +418,7 @@ def _augknt(x, k, left=True, right=True):
 
 
 
-def make_interp_spline(x, y, bcs=0, orders=3):
+def make_interp_spline(x, y, bcs=0, degrees=3):
     """Construct an interpolating B-spline.
 
     Parameters
@@ -431,10 +431,10 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     bcs : (list of) 2-tuples or None
         Boundary conditions. Each 2-tuple specifies the boundary condition as
         (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
-        boundary condition. For a 0 order spline, setting spec_value=0 for all
+        boundary condition. For a 0 degree spline, setting spec_value=0 for all
         sides implements nearest-neighbor; a single side with spec_value=0
         implements zero-order-hold from that direction.
-    orders : ndarray, shape=(xdim,), dtype=np.intc
+    degrees : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable).
 
     Notes
@@ -461,7 +461,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
     # generally, x.shape = (n_0, n_1, ..., n_(xdim-1), xdim)
     # and y.sahpe = (n_0, n_1, ..., n_(xdim-1), ydim)
 
-    orders = np.broadcast_to(orders, (xdim,))
+    degrees = np.broadcast_to(degrees, (xdim,))
 
     # broadcasting does not play nicely with xdim as last axis for some reason
     bcs = np.broadcast_to(bcs, (xdim, 2, 2))
@@ -480,7 +480,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
         x_line_sel = ((0,)*(i) + (slice(None,None),) +
             (0,)*(xdim-i-1) + (i,))
         x_slice = x[x_line_sel]
-        k = orders[i]
+        k = degrees[i]
 
         left_nak, right_nak = nak_spec[i, :]
         both_nak = left_nak and right_nak
@@ -641,7 +641,7 @@ def make_interp_spline(x, y, bcs=0, orders=3):
 
             coefficients[coeff_line_sel] = c
     coefficients = coefficients.reshape(coefficients.shape[:xdim] + yshape)
-    return NDSpline(knots, coefficients, orders,)
+    return NDSpline(knots, coefficients, degrees,)
 
 
 try:
@@ -651,7 +651,7 @@ except ImportError:
 else:
     check_pandas = True
 
-def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, orders=3):
+def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degrees=3):
     """
     Construct an interpolating B-spline from a tidy data source. The tidy data
     source should be a complete matrix (see the tidy_data parameter description).
@@ -672,7 +672,7 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, orde
         Column names (for DataFrame) or indices (for np.ndarray) for output
         variables.
     bcs : (list of) 2-tuples or None
-    orders : ndarray, shape=(ndim,), dtype=np.intc
+    degrees : ndarray, shape=(ndim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable)
     """
 
@@ -696,4 +696,4 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, orde
 
     xdata = meshgrid_data[..., input_vars]
     ydata = meshgrid_data[..., output_vars]
-    return make_interp_spline(xdata, ydata, bcs, orders)
+    return make_interp_spline(xdata, ydata, bcs, degrees)

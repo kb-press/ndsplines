@@ -53,7 +53,7 @@ ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)
 NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
 NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
 
-for order in range(0,4):
+for degree in range(0,4):
     for func in funcs:
         fvals = func(x)
         truef = func(xx)
@@ -65,7 +65,7 @@ for order in range(0,4):
     
         for test_bc in scipy_test_bcs[plot_sel,:]:
             try:
-                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=order)
+                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=degree)
             except ValueError:
                 continue
             else:
@@ -74,14 +74,14 @@ for order in range(0,4):
 
         plt.gca().set_prop_cycle(None)
         
-        if order == 0:
+        if degree == 0:
             bc_iter = k0_bcs
         else:
             bc_iter = ndsplines_test_bcs
         for test_bc in bc_iter[plot_sel,:]:
-            # test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
+            # test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, degrees=degree)
             try:
-                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
+                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, degrees=degree)
             except ValueError:
                 continue
             else:
@@ -91,7 +91,7 @@ for order in range(0,4):
         
         plt.plot(xx, truef, 'k--', label="True " + func.__name__)
         plt.plot(x, fvals, 'ko')
-        plt.title('k=%d'%order)
+        plt.title('k=%d'%degree)
         
         plt.legend(loc='best')
         plt.show()

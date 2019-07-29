@@ -50,11 +50,11 @@ ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)
 NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
 NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
 
-for order in range(1,4):
+for degree in range(1,4):
     for func in funcs:
         fvals = func(x)
         truef = func(xx)
-        if order > 0:
+        if degree > 0:
             fig, axes = plt.subplots(3,1, constrained_layout=True)
         else:
             fig, axes = plt.subplots(2,1, constrained_layout=True)
@@ -65,13 +65,13 @@ for order in range(1,4):
     
         for test_bc in scipy_test_bcs[plot_sel,:]:
             try:
-                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=order)
+                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=degree)
             except ValueError:
                 continue
             else:
                 splinef = test_Bspline(xx.copy(), extrapolate=True)
                 axes[0].plot(xx, splinef, '--', lw=3.0, label=str(test_bc) + ' (BSpline)')
-                if order > 0:
+                if degree > 0:
                     der_Bspline = test_Bspline.derivative()
                     axes[1].plot(xx, der_Bspline(xx.copy()), '--', lw=3.0, label='(BSpline)')
                 antider_Bspline = test_Bspline.antiderivative()
@@ -80,19 +80,19 @@ for order in range(1,4):
         for ax in axes:
             ax.set_prop_cycle(None)
         
-        if order == 0:
+        if degree == 0:
             bc_iter = k0_bcs
         else:
             bc_iter = ndsplines_test_bcs
         for test_bc in bc_iter[plot_sel,:]:
             try:
-                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, orders=order)
+                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, degrees=degree)
             except ValueError:
                 continue
             else:
                 NDsplinef = test_NDBspline(xx.copy())
                 axes[0].plot(xx, NDsplinef, label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
-                if order>0:
+                if degree>0:
                     der_NDspline = test_NDBspline.derivative(0)
                     axes[1].plot(xx, der_NDspline(xx.copy()), label='(ndspline)' )
                 antider_NDspline = test_NDBspline.antiderivative(0)
@@ -101,7 +101,7 @@ for order in range(1,4):
         
         axes[0].plot(xx, truef, 'k--', label="True " + func.__name__)
         axes[0].plot(x, fvals, 'ko')
-        plt.suptitle('k=%d'%order)
+        plt.suptitle('k=%d'%degree)
         
         axes[0].legend(loc='best')
         plt.show()

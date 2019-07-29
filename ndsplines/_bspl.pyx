@@ -107,7 +107,7 @@ def evaluate_spline(const double[::1] t,
     t : ndarray, shape (n+k+1)
         knots
     k : int
-        spline order
+        degree of spline
     xvals : ndarray, shape (s,)
         Points to evaluate the spline at.
     nu : int

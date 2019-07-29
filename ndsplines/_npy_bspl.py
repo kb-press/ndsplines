@@ -13,7 +13,7 @@ def find_interval(t, k, xvals, extrapolate=False, workspace=None):
     t : ndarray, shape=(n+k+1,) dtype=np.float_
         knots
     k : int
-        order of B-spline
+        degree of B-spline
     xvals : ndarray, shape=(s,) dtype=np.float_
         values to find the interval for
     extrapolate : bool, optional
@@ -75,7 +75,7 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
     t : ndarray, shape (n+k+1)
         knots
     k : int
-        spline order
+        Degree of spline
     xvals : ndarray, shape (s,)
         Points to evaluate the spline at.
     nu : int
