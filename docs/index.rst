@@ -6,6 +6,6 @@
 
    math
    compare
+   api
    auto_examples/index
    auto_benchmarks/index
-   api

@@ -37,7 +37,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx_gallery.gen_gallery',
     # can enable this later if we want
-    # 'sphinx.ext.autosummary',
+    'sphinx.ext.autosummary',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -73,4 +73,4 @@ sphinx_gallery_conf = {
 }
 
 
-# autosummary_generate = True
+autosummary_generate = True
