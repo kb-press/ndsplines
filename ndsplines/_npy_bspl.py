@@ -73,20 +73,20 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
     Parameters
     ----------
     t : ndarray, shape (n+k+1)
-        knots
+        Knots of spline to evaluate.
     k : int
-        Degree of spline
+        Degree of spline to evaluate.
     xvals : ndarray, shape (s,)
-        Points to evaluate the spline at.
+        Points at which to evaluate the spline. 
     nu : int
         Order of derivative to evaluate.
-    extrapolate : bool
+    extrapolate : int, optional
         Whether to extrapolate to ouf-of-bounds points, or to return NaNs.
     interval_workspace : ndarray, shape (s,), dtype=int
         Array used to return identified intervals, modified in-place.
     basis_workspace : ndarray, shape (s, 2*k+2), dtype=float
         Array used to return computed values of the k+1 spline basis function
-        at each of the input points
+        at each of the input points, modified in-place.
 
     Notes
     -----

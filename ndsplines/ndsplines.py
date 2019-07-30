@@ -79,7 +79,7 @@ class NDSpline(object):
         Parameters
         ----------
         num_points : int
-            the number of evaluation points to allocate.
+            Number of evaluation points to allocate for.
         """
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
@@ -94,12 +94,16 @@ class NDSpline(object):
     def compute_basis_coefficient_selector(self, x, nus=0):
         """
         Evaluate the N-dimensional B-spline basis functions and coefficient 
-        selectors.
+        selectors. This is an intermediate computation for evaluating the 
+        B-spline.
 
         Parameters
         ----------
         x : ndarray, shape=(s, self.xdim,) dtype=np.float_
+            Points at which to evaluate the spline.
         nus : int or ndarray, shape=(self.xdim,) dtype=np.int_
+            Order of derivatives for each dimension to evaluate. Optional, 
+            default is 0.
         """
         num_points = x.shape[0]
 
@@ -142,9 +146,15 @@ class NDSpline(object):
         Parameters
         ----------
         x : ndarray, shape=(..., self.xdim) dtype=np.float_
-            Point(s) to evaluate spline on. Output will be (..., self.yshape)
+            Points at which to evaluate the spline. 
         nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
-            Order of derivative(s) for each dimension to evaluate
+            Order of derivatives for each dimension to evaluate. Optional, 
+            default is 0.
+
+        Returns
+        -------
+        y : ndarray, shape=(..., self.yshape) dtype=np.float_
+            Value of N-dimensional B-spline at x.
 
         """
         if not isinstance(x, np.ndarray):
@@ -181,16 +191,15 @@ class NDSpline(object):
         Parameters
         ----------
         dim : int
-            Dimension in which to take the derivative. 1-indexed, so 
-            valid dim >= 1, <= self.xdim
+            Dimension in which to take the derivative. 0-indexed, so 
+            must be  >= 0 and < self.xdim.
         nu : int, optional
-            Derivative order.
-            Default is 1.
+            Derivative order, default is 1.
 
         Returns
         -------
-        b : BSpline object
-            A new instance with the derivative taken.
+        b : NDSpline object
+            A new instance representing the derivative.
         """
         if nu < 0:
             return self.antiderivative(dim, nu=-nu)
@@ -239,15 +248,15 @@ class NDSpline(object):
         Parameters
         ----------
         dim : int
-            Dimension in which to take the derivative. 1-indexed.
+            Dimension in which to take the derivative. 0-indexed, so 
+            must be  >= 0 and < self.xdim.
         nu : int, optional
-            Derivative order.
-            Default is 1.
+            Derivative order. Default is 1.
 
         Returns
         -------
-        b : BSpline object
-            A new instance with the antiderivative taken.
+        b : NDSpline object
+            A new instance representing the antiderivative.
         """
         if nu < 0:
             return self.derivative(dim, nu=-nu)
@@ -359,6 +368,11 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
         then weights are all equal.
         Default is ``None``.
 
+    Returns
+    -------
+    b : NDSpline object
+        A least-squares `NDSpline`.
+
     """
 
     if x.ndim == 1:
@@ -423,18 +437,24 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
     Parameters
     ----------
     x : array_like broadcastable to (n_0, n_1, ..., n_(xdim-1), xdim) or 
-        arguments to np.meshgrid to construct same
+        arguments to np.meshgrid to construct same.
         Abscissas.
-    y : array_like,
-        Ordinates. shape (n_0, n_1, ..., n_(xdim-1),) + yshape
-    bcs : (list of) 2-tuples or None
+    y : array_like, shape (n_0, n_1, ..., n_(xdim-1),) + yshape
+        Ordinates. 
+    bcs : (list of) 2-tuples or 0
         Boundary conditions. Each 2-tuple specifies the boundary condition as
         (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
         boundary condition. For a 0 degree spline, setting spec_value=0 for all
         sides implements nearest-neighbor; a single side with spec_value=0
-        implements zero-order-hold from that direction.
+        implements zero-order-hold from that direction. Optional, default is 0.
     degrees : ndarray, shape=(xdim,), dtype=np.intc
-        Degree of interpolant for each axis (or broadcastable).
+        Degree of interpolant for each axis (or broadcastable). Optional, 
+        default is 3.
+
+    Returns
+    -------
+    b : NDSpline object
+        An interpolating `NDSpline`.
 
     """
     if isinstance(x, np.ndarray):  # mesh
@@ -660,16 +680,27 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
         Pandas DataFrame or NumPy Array of data. In order to be a complete 
         matrix, we must have
         num_points = prod( nunique(input_var) for input_var in input_vars)
-        Any missing data will cause an error on reshape.
+        Any missing or extra data will cause an error on reshape.
     input_vars : iterable 
         Column names (for DataFrame) or indices (for np.ndarray) for input
         variables.
     output_vars : iterable 
         Column names (for DataFrame) or indices (for np.ndarray) for output
         variables.
-    bcs : (list of) 2-tuples or None
+    bcs : (list of) 2-tuples or 0
+        Boundary conditions. Each 2-tuple specifies the boundary condition as
+        (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
+        boundary condition. For a 0 degree spline, setting spec_value=0 for all
+        sides implements nearest-neighbor; a single side with spec_value=0
+        implements zero-order-hold from that direction. Optional, default is 0.
     degrees : ndarray, shape=(ndim,), dtype=np.intc
-        Degree of interpolant for each axis (or broadcastable)
+        Degree of interpolant for each axis (or broadcastable). Optional, 
+        default is 3.
+
+    Returns
+    -------
+    b : NDSpline object
+        An interpolating `NDSpline`.
     """
 
     if check_pandas and isinstance(tidy_data, pd.DataFrame):

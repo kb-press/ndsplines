@@ -44,12 +44,12 @@ cdef inline int find_interval(const double[::1] t,
 
     Parameters
     ----------
-    t : ndarray, shape (nt,)
-        Knots
+    t : ndarray, shape (n+k+1)
+        Knots of spline to evaluate.
     k : int
-        B-spline degree
+        Degree of spline to evaluate.
     xval : double
-        value to find the interval for
+        Point at which to evaluate the spline. 
     prev_l : int
         interval where the previous value was located.
         if unknown, use any value < k to start the search.
@@ -105,11 +105,11 @@ def evaluate_spline(const double[::1] t,
     Parameters
     ----------
     t : ndarray, shape (n+k+1)
-        knots
+        Knots of spline to evaluate.
     k : int
-        degree of spline
+        Degree of spline to evaluate.
     xvals : ndarray, shape (s,)
-        Points to evaluate the spline at.
+        Points at which to evaluate the spline. 
     nu : int
         Order of derivative to evaluate.
     extrapolate : int, optional
@@ -118,7 +118,7 @@ def evaluate_spline(const double[::1] t,
         Array used to return identified intervals, modified in-place.
     basis_workspace : ndarray, shape (s, 2*k+2), dtype=float
         Array used to return computed values of the k+1 spline basis function
-        at each of the input points
+        at each of the input points, modified in-place.
 
     """
 

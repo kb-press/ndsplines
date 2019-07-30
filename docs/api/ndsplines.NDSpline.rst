@@ -10,7 +10,6 @@
    .. autosummary::
       :toctree: NDSPline
    
-      ~NDSpline.__init__
       ~NDSpline.allocate_workspace_arrays
       ~NDSpline.compute_basis_coefficient_selector
       ~NDSpline.__call__

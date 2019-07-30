@@ -8,7 +8,6 @@ Methods of the :doc:`api/ndsplines.NDSpline` class.
 
 .. autosummary::
     
-    ~ndsplines.NDSpline.__init__
     ~ndsplines.NDSpline.allocate_workspace_arrays
     ~ndsplines.NDSpline.compute_basis_coefficient_selector
     ~ndsplines.NDSpline.__call__
