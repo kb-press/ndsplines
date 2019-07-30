@@ -112,7 +112,7 @@ def test_make_interp_nn():
     x = np.arange(0, 1, dx)
     y = np.sin(2*np.pi*x)
 
-    spl = ndsplines.make_interp_spline(x, y, bcs=[(0, 0), (0, 0)], orders=0)
+    spl = ndsplines.make_interp_spline(x, y, bcs=[(0, 0), (0, 0)], degrees=0)
 
     # samples at offsets less than dx/2 will be same as original values
     xx = x[:-1] + dx/4
