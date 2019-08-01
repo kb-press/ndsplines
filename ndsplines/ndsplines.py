@@ -310,9 +310,7 @@ class NDSpline(object):
         to_save_dict = {}
         for idx, knot in zip(range(self.xdim), self.knots):
             to_save_dict['knots_%d' % idx] = knot
-        to_save_dict['coefficients'] = self.coefficients
-        if self.squeeze:
-            to_save_dict['coefficients'] = self.coefficients[0, ...]
+        to_save_dict['coefficients'] = self.coefficients.reshape(self.coefficients.shape[:self.xdim] + self.yshape)
         to_save_dict['degrees'] = self.degrees
         to_save_dict['periodic'] = self.periodic
         to_save_dict['extrapolate'] = self.extrapolate

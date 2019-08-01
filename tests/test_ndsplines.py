@@ -204,3 +204,12 @@ def test_calculus(sample_ndsplines):
             assert_equal_splines(der_b_ij, der_b_ji)
 
         nus[i] = 0
+
+def test_file_io(sample_ndsplines):
+    """ verify lossless file i/o """
+    b = sample_ndsplines
+    fname = 'test_file_io.npz'
+    b.to_file(fname, True)
+    assert_equal_splines(b, ndsplines.from_file(fname))
+    b.to_file(fname, False)
+    assert_equal_splines(b, ndsplines.from_file(fname))
