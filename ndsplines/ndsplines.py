@@ -48,9 +48,9 @@ class NDSpline(object):
         self.xshape = tuple(knot.size for knot in knots)
         
         self.degrees = np.broadcast_to(degrees, (self.xdim,))
-        self.max_degree = np.max(self.degrees)
-        self.periodic = np.broadcast_to(periodic, (self.xdim,))
-        self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
+        self.max_degree = np.max(degrees)
+        self.periodic = periodic
+        self.extrapolate = extrapolate
 
         expected_shape = self.xshape - self.degrees - 1
         if not np.all(coefficients.shape[:self.xdim] == expected_shape):
@@ -71,6 +71,22 @@ class NDSpline(object):
         self.allocate_workspace_arrays(1)
 
         self.u_arg = [subarg for arg in zip(self.basis_workspace, self.u_ops) for subarg in arg]
+
+    @property
+    def periodic(self):
+        return self._periodic
+
+    @periodic.setter
+    def periodic(self, periodic):
+        self._periodic = np.broadcast_to(periodic, (self.xdim,))
+
+    @property
+    def extrapolate(self):
+        return self._extrapolate
+
+    @extrapolate.setter
+    def extrapolate(self, extrapolate):
+        self._extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
     def allocate_workspace_arrays(self, num_points):
         """

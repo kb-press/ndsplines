@@ -2,9 +2,11 @@ import pytest
 import ndsplines
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
+from scipy.interpolate import BSpline, BivariateSpline
+from scipy.stats import norm
 import itertools
 
-np.random.seed(0)
+np.random.seed(123)
 
 #
 # Integration/Miscellaneous tests
@@ -140,19 +142,17 @@ def assert_equal_splines(b_left, b_right):
     assert_equal(b_left.periodic, b_right.periodic)
     assert_equal(b_left.extrapolate, b_right.extrapolate)
 
-def _make_random_spline(n=35, k=3):
-    np.random.seed(123)
-    t = np.sort(np.random.random(n+k+1))
-    c = np.random.random(n)
-    return ndsplines.NDSpline([t], c, k)
-
-@pytest.fixture(
-    scope="module",
-    params=[
-    0, 1,
-    ])
-def sample_ndsplines(request):
-    yield _make_random_spline()
+def _make_random_spline(xdim=1, k=None, periodic=None, extrapolate=None):
+    ns = []
+    ts = []
+    ks = np.broadcast_to(k, (xdim,))
+    for i in range(xdim):
+        ns.append(np.random.randint(2*ks[i]+1,35))
+        ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1))) # works for 1d, fails for 2d
+        # ts.append(np.r_[0:0:(ks[i])*1j, 0:1:(ns[i]-ks[i]+1)*1j, 1:1:(ks[i])*1j]) # works for 2d
+        # ts.append(np.r_[0:0:(ks[i]+1)*1j, np.sort(np.random.rand(ns[i]-ks[i]-1)), 1:1:(ks[i]+1)*1j])
+    c = np.random.rand(*ns,1)
+    return ndsplines.NDSpline(ts, c, ks)
 
 def copy_ndspline(ndspline):
     return ndsplines.NDSpline(
@@ -163,9 +163,18 @@ def copy_ndspline(ndspline):
         ndspline.extrapolate,
         )
 
-def test_calculus(sample_ndsplines):
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, 0),
+    _make_random_spline(1, 1),
+    _make_random_spline(1, 2),
+    _make_random_spline(1, 3),
+    _make_random_spline(2, 0),
+    _make_random_spline(2, 1),
+    _make_random_spline(2, 2),
+])
+def test_calculus(ndspline):
     """ verify calculus properties """
-    b = sample_ndsplines
+    b = ndspline
     query_points = get_query_points(b)
     nus = np.zeros((b.xdim), dtype=np.int)
     for i in range(b.xdim):
@@ -205,11 +214,98 @@ def test_calculus(sample_ndsplines):
 
         nus[i] = 0
 
-def test_file_io(sample_ndsplines):
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, 0),
+    _make_random_spline(1, 1),
+    _make_random_spline(1, 2),
+    _make_random_spline(1, 3),
+    _make_random_spline(2, 0),
+    _make_random_spline(2, 1),
+    _make_random_spline(2, 2),
+    _make_random_spline(2, 3),
+])
+def test_file_io(ndspline):
     """ verify lossless file i/o """
-    b = sample_ndsplines
+    b = ndspline
     fname = 'test_file_io.npz'
     b.to_file(fname, True)
     assert_equal_splines(b, ndsplines.from_file(fname))
     b.to_file(fname, False)
     assert_equal_splines(b, ndsplines.from_file(fname))
+
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, 0),
+    _make_random_spline(1, 1),
+    _make_random_spline(1, 2),
+    _make_random_spline(1, 3),
+])
+def test_1d_eval(ndspline):
+    bn = ndspline
+    query_points = get_query_points(bn)
+    bs = BSpline(bn.knots[0], bn.coefficients, bn.degrees[0])
+    for nu in range(bn.degrees[0]+1):
+        bs.extrapolate = True
+        bn.extrapolate = True
+
+        bs_res = bs(query_points, nu).squeeze()
+        bn_res = bn(query_points, nu).squeeze()
+        assert_allclose(bn_res, bs_res)
+
+        bs.extrapolate = False
+        bn.extrapolate = False
+        bs_res = bs(query_points, nu).squeeze()
+        bn_res = bn(query_points, nu).squeeze()
+        assert_allclose(bn_res[~np.isnan(bs_res)], bs_res[~np.isnan(bs_res)])
+
+        bs.extrapolate = 'periodic'
+        bn.periodic = True
+
+        bs_res = bs(query_points, nu).squeeze()
+        bn_res = bn(query_points, nu).squeeze()
+        assert_allclose(bn_res, bs_res)
+
+
+        
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(2, [kx, ky]) for kx in range(4) for ky in range(4)
+])
+def test_2d_eval(ndspline):
+    bn = ndspline
+    query_points = get_query_points(bn)
+    bs = BivariateSpline._from_tck(
+        tuple(ndspline.knots + 
+            [ndspline.coefficients.reshape(-1)] + 
+            ndspline.degrees.tolist()
+        ))
+
+    bn.extrapolate = False
+
+    bn_res = bn(query_points,).squeeze()
+    bs_res = bs(query_points[:,0], query_points[:,1], grid=False)
+    assert_allclose(bn_res, bs_res)
+
+    if np.all(bn.degrees>0):
+
+
+        for nux in range(1, bn.degrees[0]):
+            bn_res = bn(query_points, np.r_[nux, 0]).squeeze()
+            try:
+                bs_res = bs(query_points[:,0], query_points[:,1], nux, 0, grid=False)
+            except ValueError:
+                print("nux:", nux, "xshape: ", ndspline.xshape, "degrees:", bn.degrees)
+                # continue
+
+            assert_allclose(bn_res, bs_res)
+
+        for nuy in range(1, bn.degrees[1]):
+
+            bn_res = bn(query_points, np.r_[0, nuy]).squeeze()
+            try:
+                bs_res = bs(query_points[:,0], query_points[:,1], 0, nuy, grid=False)
+            except ValueError:
+                print("nuy:", nuy, "xshape: ", ndspline.xshape, "degrees:", bn.degrees)
+                # continue
+
+            assert_allclose(bn_res, bs_res)
+
+
