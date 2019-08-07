@@ -86,6 +86,12 @@ class NDSpline(object):
 
     @extrapolate.setter
     def extrapolate(self, extrapolate):
+        if not isinstance(extrapolate, np.ndarray) and not np.isscalar(extrapolate):
+            extrapolate = np.array(extrapolate)
+        if isinstance(extrapolate, np.ndarray):
+            if extrapolate.ndim == 1:
+                extrapolate = extrapolate[:,None]
+
         self._extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
     def allocate_workspace_arrays(self, num_points):
@@ -231,7 +237,7 @@ class NDSpline(object):
         t = knots[dim]
         c_left_selector = [slice(None)]*self.xdim + [...,]
         c_right_selector = [slice(None)]*self.xdim + [...,]
-        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim)
 
         with np.errstate(invalid='raise', divide='raise'):
             try:
@@ -282,15 +288,13 @@ class NDSpline(object):
         degrees = self.degrees.copy()
         knots = [knot.copy() for knot in self.knots]
         t = knots[dim]
-        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim)
         left_pad_width = [(0,0)]*dim + [(1,0)] + [(0,0)]*(self.xdim-dim)
-        right_pad_width = [(0,0)]*dim + [(0,2)] + [(0,0)]*(self.xdim-dim)
         for j in range(nu):
             dt = (t[k+1:] - t[:-k-1])[dt_shape]
             # Compute the new coefficients
             coefficients = np.cumsum(coefficients * dt, axis=dim) / (k+1)
             coefficients = np.pad(coefficients, left_pad_width, 'constant')
-            # coefficients = np.pad(coefficients, right_pad_width, 'edge')
             # Adjust knots
             t = np.r_[t[0], t, t[-1]] 
             k += 1

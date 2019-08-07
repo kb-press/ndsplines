@@ -142,17 +142,27 @@ def assert_equal_splines(b_left, b_right):
     assert_equal(b_left.periodic, b_right.periodic)
     assert_equal(b_left.extrapolate, b_right.extrapolate)
 
-def _make_random_spline(xdim=1, k=None, periodic=None, extrapolate=None):
+def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape=None, ydim=1, ymax=3):
     ns = []
     ts = []
-    ks = np.broadcast_to(k, (xdim,))
+    if k is None:
+        ks = np.random.randint(4, size=xdim)
+    else:
+        ks = np.broadcast_to(k, (xdim,))
+    if periodic is None:
+        periodic = np.random.randint(2,size=xdim, dtype=np.bool_)
+    if extrapolate is None:
+        extrapolate = np.random.randint(2,size=xdim, dtype=np.bool_)
+
+    if ydim is None:
+        ydim = np.random.randint(5)
+    if yshape is None:
+        yshape = tuple(np.random.randint(1, ymax, size=ydim))
     for i in range(xdim):
         ns.append(np.random.randint(2*ks[i]+1,35))
-        ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1))) # works for 1d, fails for 2d
-        # ts.append(np.r_[0:0:(ks[i])*1j, 0:1:(ns[i]-ks[i]+1)*1j, 1:1:(ks[i])*1j]) # works for 2d
-        # ts.append(np.r_[0:0:(ks[i]+1)*1j, np.sort(np.random.rand(ns[i]-ks[i]-1)), 1:1:(ks[i]+1)*1j])
-    c = np.random.rand(*ns,1)
-    return ndsplines.NDSpline(ts, c, ks)
+        ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1)))
+    c = np.random.rand(*ns,*yshape)
+    return ndsplines.NDSpline(ts, c, ks, periodic, extrapolate)
 
 def copy_ndspline(ndspline):
     return ndsplines.NDSpline(
@@ -163,15 +173,12 @@ def copy_ndspline(ndspline):
         ndspline.extrapolate,
         )
 
-@pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1, 0),
-    _make_random_spline(1, 1),
-    _make_random_spline(1, 2),
-    _make_random_spline(1, 3),
-    _make_random_spline(2, 0),
-    _make_random_spline(2, 1),
-    _make_random_spline(2, 2),
-])
+@pytest.mark.parametrize('ndspline', 
+    [_make_random_spline(1, kx,) for kx in range(4) ]  
+    + [_make_random_spline(2, [kx, ky]) for kx in range(1,4) for ky in range(1,4)] 
+    + [_make_random_spline(3, [kx, ky, kz]) 
+       for kx in range(1,4) for ky in range(1,4) for kz in range(1,4)]
+)
 def test_calculus(ndspline):
     """ verify calculus properties """
     b = ndspline
@@ -206,7 +213,7 @@ def test_calculus(ndspline):
         assert_equal_splines(der_offset_antider_b_i, b)
 
         for j in range(b.xdim):
-            if i == j:
+            if i == j or b.degrees[j] < 1:
                 continue
             der_b_ij = der_b_i.derivative(j, 1)
             der_b_ji = b.derivative(j, 1).derivative(i, 1)
@@ -215,14 +222,14 @@ def test_calculus(ndspline):
         nus[i] = 0
 
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1, 0),
-    _make_random_spline(1, 1),
-    _make_random_spline(1, 2),
-    _make_random_spline(1, 3),
-    _make_random_spline(2, 0),
-    _make_random_spline(2, 1),
-    _make_random_spline(2, 2),
-    _make_random_spline(2, 3),
+    _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
+    _make_random_spline(4, periodic=None, extrapolate=None),
+    _make_random_spline(4, periodic=None, extrapolate=None),
 ])
 def test_file_io(ndspline):
     """ verify lossless file i/o """
@@ -234,10 +241,10 @@ def test_file_io(ndspline):
     assert_equal_splines(b, ndsplines.from_file(fname))
 
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1, 0),
-    _make_random_spline(1, 1),
-    _make_random_spline(1, 2),
-    _make_random_spline(1, 3),
+    _make_random_spline(1, 0, ydim=1),
+    _make_random_spline(1, 1, ydim=1),
+    _make_random_spline(1, 2, ydim=1),
+    _make_random_spline(1, 3, ydim=1),
 ])
 def test_1d_eval(ndspline):
     bn = ndspline
@@ -267,7 +274,7 @@ def test_1d_eval(ndspline):
 
         
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(2, [kx, ky]) for kx in range(4) for ky in range(4)
+    _make_random_spline(2, [kx, ky], yshape=()) for kx in range(4) for ky in range(4)
 ])
 def test_2d_eval(ndspline):
     bn = ndspline
@@ -289,22 +296,14 @@ def test_2d_eval(ndspline):
 
         for nux in range(1, bn.degrees[0]):
             bn_res = bn(query_points, np.r_[nux, 0]).squeeze()
-            try:
-                bs_res = bs(query_points[:,0], query_points[:,1], nux, 0, grid=False)
-            except ValueError:
-                print("nux:", nux, "xshape: ", ndspline.xshape, "degrees:", bn.degrees)
-                # continue
+            bs_res = bs(query_points[:,0], query_points[:,1], nux, 0, grid=False)
 
             assert_allclose(bn_res, bs_res)
 
         for nuy in range(1, bn.degrees[1]):
 
             bn_res = bn(query_points, np.r_[0, nuy]).squeeze()
-            try:
-                bs_res = bs(query_points[:,0], query_points[:,1], 0, nuy, grid=False)
-            except ValueError:
-                print("nuy:", nuy, "xshape: ", ndspline.xshape, "degrees:", bn.degrees)
-                # continue
+            bs_res = bs(query_points[:,0], query_points[:,1], 0, nuy, grid=False)
 
             assert_allclose(bn_res, bs_res)
 
