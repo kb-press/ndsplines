@@ -1,21 +1,15 @@
 import numpy as np
 import operator
 from scipy._lib.six import string_types
-from scipy.linalg import (get_lapack_funcs, LinAlgError, cholesky_banded,
-                          cho_solve_banded)
+from scipy.linalg import get_lapack_funcs, LinAlgError
 from scipy.interpolate._bsplines import (prod, _as_float_array,
                                          _bspl as _sci_bspl)
 
 from ndsplines import _npy_bspl
 
-__all__ = ['pinned', 'clamped', 'notaknot', 'impl', 'NDSpline',
+__all__ = ['impl', 'NDSpline', '_not_a_knot', '_augknt',
            'make_interp_spline', 'make_lsq_spline',
            'make_interp_spline_from_tidy', 'from_file']
-
-# boundary conditions: order of derivative, value of derivative
-clamped = np.array([1, 0.0])
-pinned = np.array([2, 0.0])
-notaknot = np.array([0, 0.0])
 
 impl = _npy_bspl
 
@@ -427,6 +421,25 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     return temp_spline
 
 def _not_a_knot(x, k, left=True, right=True):
+    """Utility function to perform the knot portion of the not-a-knot procedure.
+
+    Parameters
+    ----------
+    x : ndarray, shape=(n,), dtype=np.float_
+        Knot array to perform the not-a-knot procedure on
+    k : int
+        Degree of desired spline
+    left : bool
+        Whether to apply not-a-knot to the left side. Optional, default is True.
+    right : bool
+        Whether apply to not-a-knot to the right side. Optional, default is
+        True.
+
+    Returns
+    -------
+    t : ndarray
+        Knot array with left and/or right not-a-knot procedure applied.
+    """
     if k > 2 and k % 2 == 0:
         raise ValueError("Odd degree for now only. Got %s." % k)
     if k==0: # special case for k = 0, only apply to right
@@ -440,6 +453,26 @@ def _not_a_knot(x, k, left=True, right=True):
 
 
 def _augknt(x, k, left=True, right=True):
+    """Utility function to perform knot augmentation.
+
+    Parameters
+    ----------
+    x : ndarray, shape=(n,), dtype=np.float_
+        Knot array to perform the not-a-knot procedure on
+    k : int
+        Degree of desired spline
+    left : bool
+        Whether to apply knot augmentation to the left side. Optional, default is 
+        True.
+    right : bool
+        Whether to apply knot augmentation to the right side. Optional, default 
+        is True.
+
+    Returns
+    -------
+    t : ndarray
+        Knot array with left and/or right knot augmentation applied.
+    """
     t = x
     if left:
         t = np.r_[(t[0],)*k, t]
@@ -449,7 +482,7 @@ def _augknt(x, k, left=True, right=True):
 
 
 
-def make_interp_spline(x, y, bcs=0, degrees=3):
+def make_interp_spline(x, y, degrees=3):
     """Construct an interpolating B-spline.
 
     Parameters
@@ -458,13 +491,7 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
         arguments to np.meshgrid to construct same.
         Abscissas.
     y : array_like, shape (n_0, n_1, ..., n_(xdim-1),) + yshape
-        Ordinates. 
-    bcs : (list of) 2-tuples or 0
-        Boundary conditions. Each 2-tuple specifies the boundary condition as
-        (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
-        boundary condition. For a 0 degree spline, setting spec_value=0 for all
-        sides implements nearest-neighbor; a single side with spec_value=0
-        implements zero-order-hold from that direction. Optional, default is 0.
+        Ordinates.
     degrees : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable). Optional, 
         default is 3.
@@ -498,7 +525,7 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
     degrees = np.broadcast_to(degrees, (xdim,))
 
     # broadcasting does not play nicely with xdim as last axis for some reason
-    bcs = np.broadcast_to(bcs, (xdim, 2, 2))
+    bcs = np.broadcast_to(0, (xdim, 2, 2))
     deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=np.int)
     nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=np.bool)
 
