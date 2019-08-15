@@ -114,18 +114,18 @@ def test_make_interp_nn():
     x = np.arange(0, 1, dx)
     y = np.sin(2*np.pi*x)
 
-    spl = ndsplines.make_interp_spline(x, y, bcs=[(0, 0), (0, 0)], degrees=0)
+    spl = ndsplines.make_interp_spline(x, y, degrees=0)
 
     # samples at offsets less than dx/2 will be same as original values
     xx = x[:-1] + dx/4
     assert_allclose(spl(xx), spl(x[:-1]))
 
-def get_query_points(ndspline):
+def get_query_points(ndspline, n=1024):
     knot_minmax = np.empty((2, ndspline.xdim))
     for i in range(ndspline.xdim):
         knot_minmax[0, i] = ndspline.knots[i][0]
         knot_minmax[1, i] = ndspline.knots[i][-1]
-    query_points = np.random.rand(1024, ndspline.xdim,)
+    query_points = np.random.rand(n, ndspline.xdim,)
     query_points[...] = query_points[...] * np.diff(knot_minmax, axis=0) + knot_minmax[0]
     return query_points
 
@@ -146,7 +146,7 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
     ns = []
     ts = []
     if k is None:
-        ks = np.random.randint(4, size=xdim)
+        ks = np.random.randint(5, size=xdim)
     else:
         ks = np.broadcast_to(k, (xdim,))
     if periodic is None:
@@ -308,3 +308,25 @@ def test_2d_eval(ndspline):
             bs_res = bs(query_points[:,0], query_points[:,1], 0, nuy, grid=False)
 
             assert_allclose(bn_res, bs_res)
+
+
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1),
+    _make_random_spline(1),
+    _make_random_spline(1),
+    _make_random_spline(1),
+])
+def test_1d_make_lsq(ndspline):
+    N = 100
+    sample_x = np.sort(get_query_points(ndspline, n=N).squeeze())
+    sample_y = ndspline(sample_x) + 0.1 * np.random.randn(N, *ndspline.yshape)
+    for k in range(4):
+        # it was non-trivial to figure out the proper parameters for
+        # scipy.interpolate. It needed specific knot sequence (possibly other 
+        # solutions) and sorted sample data. ndspline did not need either.
+        knots = np.r_[(0.0,)*(k+1), 0.25, 0.5, 0.75, (1.0,)*(k+1)]
+        nspl = ndsplines.make_lsq_spline(sample_x, sample_y, [knots], [k])
+        sorted_x = np.sort(sample_x, axis=0)
+        ispl = interpolate.make_lsq_spline(sorted_x, sample_y, knots, k)
+        assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
+
