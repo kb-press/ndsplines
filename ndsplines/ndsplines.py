@@ -377,8 +377,7 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     degrees : ndarray, shape=(xdim,), dtype=np.int_                           
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
-        then weights are all equal.
-        Default is ``None``.
+        then weights are all equal. Default is ``None``.
 
     Returns
     -------
@@ -410,7 +409,10 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
 
     observation_matrix = observation_tensor.reshape((num_points, -1))
 
-    # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
+    if w is not None:
+        y = w[:, None]*y
+        observation_matrix = w[:, None] * observation_matrix
+
     lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y, rcond=None)
 
     temp_spline.coefficients = lsq_coefficients.reshape(knot_shapes + yshape)

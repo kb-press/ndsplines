@@ -320,13 +320,22 @@ def test_1d_make_lsq(ndspline):
     N = 100
     sample_x = np.sort(get_query_points(ndspline, n=N).squeeze())
     sample_y = ndspline(sample_x) + 0.1 * np.random.randn(N, *ndspline.yshape)
+    # it was non-trivial to figure out the proper parameters for
+    # scipy.interpolate. It needed specific knot sequence (possibly other 
+    # solutions) and sorted sample data. ndspline did not need either.
     for k in range(4):
-        # it was non-trivial to figure out the proper parameters for
-        # scipy.interpolate. It needed specific knot sequence (possibly other 
-        # solutions) and sorted sample data. ndspline did not need either.
         knots = np.r_[(0.0,)*(k+1), 0.25, 0.5, 0.75, (1.0,)*(k+1)]
+            
+        # unweighted
         nspl = ndsplines.make_lsq_spline(sample_x, sample_y, [knots], [k])
-        sorted_x = np.sort(sample_x, axis=0)
-        ispl = interpolate.make_lsq_spline(sorted_x, sample_y, knots, k)
+        ispl = interpolate.make_lsq_spline(sample_x, sample_y, knots, k)
         assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
+
+        # random weights
+        w = np.random.random(N)
+        nspl = ndsplines.make_lsq_spline(sample_x, sample_y, [knots], [k], w)
+        ispl = interpolate.make_lsq_spline(sample_x, sample_y, knots, k, w)
+        assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
+
+
 
