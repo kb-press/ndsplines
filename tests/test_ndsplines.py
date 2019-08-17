@@ -123,13 +123,13 @@ def test_make_interp_nn():
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1, periodic=None, extrapolate=None),
-    # _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(1, periodic=None, extrapolate=None),
     _make_random_spline(2, periodic=None, extrapolate=None),
-    # _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
     _make_random_spline(3, periodic=None, extrapolate=None),
-    # _make_random_spline(3, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
     _make_random_spline(4, periodic=None, extrapolate=None),
-    # _make_random_spline(4, periodic=None, extrapolate=None),
+    _make_random_spline(4, periodic=None, extrapolate=None),
 ])
 def test_file_io(ndspline):
     """ verify lossless file i/o """

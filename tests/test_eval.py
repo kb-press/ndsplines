@@ -8,8 +8,8 @@ from utils import (get_query_points, assert_equal_splines, _make_random_spline,
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1, 0, ydim=1),
-    # _make_random_spline(1, 1, ydim=1),
-    # _make_random_spline(1, 2, ydim=1),
+    _make_random_spline(1, 1, ydim=1),
+    _make_random_spline(1, 2, ydim=1),
     _make_random_spline(1, 3, ydim=1),
 ])
 def test_1d_eval(ndspline):
@@ -41,7 +41,7 @@ def test_1d_eval(ndspline):
 
         
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(2, [kx, ky], yshape=()) for kx in range(1,4) for ky in range(1,4)
+    _make_random_spline(2, [kx, ky], yshape=()) for kx in range(0,4) for ky in range(0,4)
 ])
 def test_2d_eval(ndspline):
     """ compare evaluation of 2-d NDSpline to scipy.interpolate.BivariateSpline """
