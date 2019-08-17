@@ -25,7 +25,7 @@ def assert_equal_splines(b_left, b_right):
     assert_equal(b_left.periodic, b_right.periodic)
     assert_equal(b_left.extrapolate, b_right.extrapolate)
 
-def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape=None, ydim=1, ymax=3):
+def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape=None, ydim=1, ymax=10):
     ns = []
     ts = []
     if k is None:
