@@ -338,6 +338,14 @@ class NDSpline(object):
             np.savez(file, **to_save_dict)
 
     def copy(self):
+        """
+        Return a deep copy of this `NDSpline` object.
+
+        Returns
+        -------
+        b : NDSpline object
+            A deep copy of this spline.
+        """
         return self.__class__(
         [knot.copy() for knot in self.knots],
         self.coefficients.copy(),
@@ -347,6 +355,14 @@ class NDSpline(object):
         )
 
     def __eq__(self, other):
+        """
+        Determine equality with another spline.
+
+        Parameters
+        ----------
+        other : NDSpline object
+            Other spline to check equality with.
+        """
         status = True
         for knot_left, knot_right in zip(self.knots, other.knots):
             status = status & np.allclose(knot_left, knot_right)
