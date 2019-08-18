@@ -49,9 +49,9 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
 
 def copy_ndspline(ndspline):
     return ndsplines.NDSpline(
-        ndspline.knots,
-        ndspline.coefficients,
-        ndspline.degrees,
-        ndspline.periodic,
-        ndspline.extrapolate,
+        [knot.copy() for knot in ndspline.knots],
+        ndspline.coefficients.copy(),
+        ndspline.degrees.copy(),
+        ndspline.periodic.copy(),
+        ndspline.extrapolate.copy(),
         )

@@ -20,6 +20,7 @@ def test_1d_eval(ndspline):
     for nu in range(bn.degrees[0]+1):
         bs.extrapolate = True
         bn.extrapolate = True
+        bn.periodic = False
 
         bs_res = bs(query_points, nu).squeeze()
         bn_res = bn(query_points, nu).squeeze()
@@ -37,6 +38,7 @@ def test_1d_eval(ndspline):
         bs_res = bs(query_points, nu).squeeze()
         bn_res = bn(query_points, nu).squeeze()
         assert_allclose(bn_res, bs_res)
+
 
 
         

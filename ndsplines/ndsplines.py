@@ -175,6 +175,9 @@ class NDSpline(object):
         """
         if not isinstance(x, np.ndarray):
             x = np.array(x)
+        else:
+            x = x.copy(order='C')
+
         if x.ndim == 1 and self.xdim==1: # multiple points in 1D space
             x = x[:, None]
         elif x.ndim == 1 and x.size == self.xdim: # 1 point in ND space
