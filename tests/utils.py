@@ -15,15 +15,7 @@ def get_query_points(ndspline, n=1024):
 
 def assert_equal_splines(b_left, b_right):
     """ assert all properties of spline are equal (within tolerance) """
-    for knot_left, knot_right in zip(b_left.knots, b_right.knots):
-        assert_allclose(knot_left, knot_right)
-
-    assert_allclose(b_left.coefficients, b_right.coefficients)
-
-    # TODO: is this the best way to do this test?
-    assert_equal(b_left.degrees, b_right.degrees)
-    assert_equal(b_left.periodic, b_right.periodic)
-    assert_equal(b_left.extrapolate, b_right.extrapolate)
+    assert b_left == b_right
 
 def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape=None, ydim=1, ymax=10):
     ns = []
@@ -46,15 +38,6 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
         ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1)))
     c = np.random.rand(*ns,*yshape)
     return ndsplines.NDSpline(ts, c, ks, periodic, extrapolate)
-
-def copy_ndspline(ndspline):
-    return ndsplines.NDSpline(
-        [knot.copy() for knot in ndspline.knots],
-        ndspline.coefficients.copy(),
-        ndspline.degrees.copy(),
-        ndspline.periodic.copy(),
-        ndspline.extrapolate.copy(),
-        )
 
 def get_grid_data(*nums):
     return np.stack(np.meshgrid(*[

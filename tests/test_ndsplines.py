@@ -5,8 +5,7 @@ from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
 from scipy.stats import norm
 import itertools
-from utils import (get_query_points, assert_equal_splines, _make_random_spline,
-    copy_ndspline)
+from utils import get_query_points, assert_equal_splines, _make_random_spline
 
 #
 # Integration/Miscellaneous tests

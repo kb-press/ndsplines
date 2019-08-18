@@ -337,6 +337,29 @@ class NDSpline(object):
         else:
             np.savez(file, **to_save_dict)
 
+    def copy(self):
+        return self.__class__(
+        [knot.copy() for knot in self.knots],
+        self.coefficients.copy(),
+        self.degrees.copy(),
+        self.periodic.copy(),
+        self.extrapolate.copy(),
+        )
+
+    def __eq__(self, other):
+        status = True
+        for knot_left, knot_right in zip(self.knots, other.knots):
+            status = status & np.allclose(knot_left, knot_right)
+
+        status = status & np.allclose(self.coefficients, other.coefficients)
+
+        status = status & np.all(self.degrees == other.degrees)
+        status = status & np.all(self.periodic == other.periodic)
+        status = status & np.all(self.extrapolate == other.extrapolate)
+        
+        return status
+
+
 
 def from_file(file):
     """
