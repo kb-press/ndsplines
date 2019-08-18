@@ -4,18 +4,22 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
 from utils import (get_query_points, assert_equal_splines, _make_random_spline,
-    copy_ndspline)
+    copy_ndspline, get_grid_data)
 
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1),
-    _make_random_spline(1),
-    _make_random_spline(1),
-    _make_random_spline(1),
+    _make_random_spline(1, yshape=(1,)),
+    _make_random_spline(1, yshape=(1,)),
+    _make_random_spline(1, yshape=(1,)),
+    _make_random_spline(1, yshape=(1,)),
 ])
 def test_1d_make_lsq(ndspline):
     N = 100
+    stddev = 1E-3
     sample_x = np.sort(get_query_points(ndspline, n=N).squeeze())
-    sample_y = ndspline(sample_x) 
+    sample_y = ndspline(sample_x)
+    signal_rms = (sample_y**2).sum(axis=0)/N
+    snr_ratio = 10
+    sample_y = sample_y + signal_rms/snr_ratio*np.random.random(sample_y.shape)
     # it was non-trivial to figure out the proper parameters for
     # scipy.interpolate. It needed specific knot sequence (possibly other 
     # solutions) and sorted sample data. ndspline did not need either.
@@ -23,8 +27,8 @@ def test_1d_make_lsq(ndspline):
         knots = np.r_[(0.0,)*(k+1), 0.25, 0.5, 0.75, (1.0,)*(k+1)]
 
         # unweighted
-        nspl = ndsplines.make_lsq_spline(sample_x, sample_y, [knots], [k])
-        ispl = interpolate.make_lsq_spline(sample_x, sample_y, knots, k)
+        nspl = ndsplines.make_lsq_spline(sample_x, sample_y.copy(), [knots], [k])
+        ispl = interpolate.make_lsq_spline(sample_x, sample_y.copy(), knots, k)
         assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
 
         # random weights
@@ -82,3 +86,41 @@ def test_2d_make_lsq(ndspline):
             assert_allclose(ispl.get_knots()[1], nspl.knots[1])
             assert_allclose(nspl.coefficients.reshape(-1), ispl.get_coeffs().reshape(-1))
 
+
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
+])
+def test_nd_make_lsq(ndspline):
+    k = 3
+    knot_sample_x = np.stack(np.meshgrid(
+        *[np.r_[t[0], (t[0]+t[k+1])/2, t[k+1:-k-1], (t[-k-2]+t[-1])/2, t[-1]] 
+         for t in ndspline.knots],
+        indexing='ij'), axis=-1)
+    knot_sample_y = ndspline(knot_sample_x.copy())
+    print(knot_sample_x)
+    nspl = ndsplines.make_interp_spline(knot_sample_x, knot_sample_y, k)
+
+    N = int(3*knot_sample_x.size**(1/nspl.xdim))
+    sample_x = np.stack(np.meshgrid(*[
+        np.linspace(0,1, N) for i in range(nspl.xdim)],
+         indexing='ij'), axis=-1).reshape((-1, nspl.xdim))
+
+
+    sample_y = nspl(sample_x)
+    print(sample_x.shape, sample_y.shape)
+
+    nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
+    assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
+    # assert_equal_splines(nlsq, nspl)
+    
+    sample_y_orig = sample_y
+    signal_rms = (sample_y**2).sum(axis=0)/sample_x.size
+
+    snr_ratio = 10**(nspl.xdim+3)
+    sample_y = sample_y_orig + signal_rms[None, :]/snr_ratio*np.random.random(sample_y.shape)
+    nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
+    # assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
+    assert np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)<snr_ratio
+    

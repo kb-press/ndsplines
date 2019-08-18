@@ -4,12 +4,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
 from utils import (get_query_points, assert_equal_splines, _make_random_spline,
-    copy_ndspline)
-
-def get_grid_data(*nums):
-    return np.stack(np.meshgrid(*[
-        np.sort(np.random.rand(n)) for n in nums],
-         indexing='ij'), axis=-1)
+    copy_ndspline, get_grid_data)
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1),

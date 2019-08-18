@@ -388,18 +388,17 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
         A least-squares `NDSpline`.
 
     """
-
     if x.ndim == 1:
         x = x[:, None]
     xdim = x.shape[1]
     num_points = x.shape[0]
 
-    yshape = y.shape[xdim:]
+    yshape = y.shape[1:]
     ydim = prod(yshape)
     y = y.reshape(num_points, ydim)
 
     # make slices c-contiguous
-    x = np.ascontiguousarray(x.T, dtype=np.float_).T
+    x = x.T.copy(order='C').T
     knot_shapes = tuple(knot.size - degree - 1 for knot, degree in zip(knots, degrees))
 
     temp_spline = NDSpline(knots, np.empty(knot_shapes + yshape), degrees)

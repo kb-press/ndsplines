@@ -42,7 +42,7 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
     if yshape is None:
         yshape = tuple(np.random.randint(1, ymax, size=ydim))
     for i in range(xdim):
-        ns.append(np.random.randint(2*ks[i]+1,35))
+        ns.append(np.random.randint(2*min(ks[i]+1,3),11))
         ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1)))
     c = np.random.rand(*ns,*yshape)
     return ndsplines.NDSpline(ts, c, ks, periodic, extrapolate)
@@ -55,3 +55,8 @@ def copy_ndspline(ndspline):
         ndspline.periodic.copy(),
         ndspline.extrapolate.copy(),
         )
+
+def get_grid_data(*nums):
+    return np.stack(np.meshgrid(*[
+        np.sort(np.random.rand(n)) for n in nums],
+         indexing='ij'), axis=-1)
