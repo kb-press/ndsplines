@@ -34,18 +34,22 @@ steps:
 - script: |
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
-    python -m pip install pandas
     pip list
   displayName: 'Install dependencies'
 
 - script: |
-    pip install pytest pytest-azurepipelines pytest-cov
+    python -m pip install pytest pytest-azurepipelines pytest-cov pandas
     python setup.py build
     python setup.py install
-    pytest -sv --cov=./
-  displayName: 'Test'
+  displayName: 'Install Test dependencies'
 
 - script: |
+    pytest -sv
+  displayName: 'Test'
+  condition: ne('Job Linux_Py36', variables['Agent.JobName'])
+
+- script: |
+    pytest -sv --cov=./
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
-  displayName: 'Upload coverage report'
-  condition: ne('Windows_NT', variables['Agent.OS'])
+  displayName: 'Test With Coverage'
+  condition: eq('Job Linux_Py36', variables['Agent.JobName'])
