@@ -372,7 +372,7 @@ class NDSpline(object):
         status = status & np.all(self.degrees == other.degrees)
         status = status & np.all(self.periodic == other.periodic)
         status = status & np.all(self.extrapolate == other.extrapolate)
-        
+        status = status & (self.yshape == other.yshape)
         return status
 
 
@@ -755,7 +755,7 @@ except ImportError:
 else:
     check_pandas = True
 
-def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degrees=3):
+def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, degrees=3):
     """
     Construct an interpolating B-spline from a tidy data source. The tidy data
     source should be a complete matrix (see the tidy_data parameter description).
@@ -775,12 +775,6 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
     output_vars : iterable 
         Column names (for DataFrame) or indices (for np.ndarray) for output
         variables.
-    bcs : (list of) 2-tuples or 0
-        Boundary conditions. Each 2-tuple specifies the boundary condition as
-        (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
-        boundary condition. For a 0 degree spline, setting spec_value=0 for all
-        sides implements nearest-neighbor; a single side with spec_value=0
-        implements zero-order-hold from that direction. Optional, default is 0.
     degrees : ndarray, shape=(ndim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable). Optional, 
         default is 3.
@@ -811,4 +805,4 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
 
     xdata = meshgrid_data[..., input_vars]
     ydata = meshgrid_data[..., output_vars]
-    return make_interp_spline(xdata, ydata, bcs, degrees)
+    return make_interp_spline(xdata, ydata, degrees)
