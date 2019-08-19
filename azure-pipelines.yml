@@ -48,4 +48,6 @@ steps:
 - script: |
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Upload coverage report'
-  condition: notIn('win', variables.imageName)
+  variables:
+    name: $(imageName)
+  condition: notIn('win', variables.name)
