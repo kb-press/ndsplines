@@ -31,9 +31,6 @@ steps:
     versionSpec: '$(python.version)'
   displayName: 'Use Python $(python.version)'
 
-variables:
-  name: $(imageName)
-
 - script: |
     python -m pip install --upgrade pip
     python -m pip install -r requirements.txt
@@ -51,4 +48,4 @@ variables:
 - script: |
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Upload coverage report'
-  condition: notIn('win', variables.name)
+  condition: ne('Windows_NT', variables['Agent.OS'])
