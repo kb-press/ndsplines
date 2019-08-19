@@ -1,21 +1,14 @@
 import numpy as np
 import operator
 from scipy._lib.six import string_types
-from scipy.linalg import (get_lapack_funcs, LinAlgError, cholesky_banded,
-                          cho_solve_banded)
+from scipy.linalg import get_lapack_funcs, LinAlgError
 from scipy.interpolate._bsplines import (prod, _as_float_array,
                                          _bspl as _sci_bspl)
 
 from ndsplines import _npy_bspl
 
-__all__ = ['pinned', 'clamped', 'notaknot', 'impl', 'NDSpline',
-           'make_interp_spline', 'make_lsq_spline',
-           'make_interp_spline_from_tidy', 'from_file']
-
-# boundary conditions: order of derivative, value of derivative
-clamped = np.array([1, 0.0])
-pinned = np.array([2, 0.0])
-notaknot = np.array([0, 0.0])
+__all__ = ['impl', 'NDSpline', '_not_a_knot', 'make_interp_spline', 
+           'make_lsq_spline', 'make_interp_spline_from_tidy', 'from_file']
 
 impl = _npy_bspl
 
@@ -48,9 +41,9 @@ class NDSpline(object):
         self.xshape = tuple(knot.size for knot in knots)
         
         self.degrees = np.broadcast_to(degrees, (self.xdim,))
-        self.max_degree = np.max(self.degrees)
-        self.periodic = np.broadcast_to(periodic, (self.xdim,))
-        self.extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
+        self.max_degree = np.max(degrees)
+        self.periodic = periodic
+        self.extrapolate = extrapolate
 
         expected_shape = self.xshape - self.degrees - 1
         if not np.all(coefficients.shape[:self.xdim] == expected_shape):
@@ -71,6 +64,28 @@ class NDSpline(object):
         self.allocate_workspace_arrays(1)
 
         self.u_arg = [subarg for arg in zip(self.basis_workspace, self.u_ops) for subarg in arg]
+
+    @property
+    def periodic(self):
+        return self._periodic
+
+    @periodic.setter
+    def periodic(self, periodic):
+        self._periodic = np.broadcast_to(periodic, (self.xdim,))
+
+    @property
+    def extrapolate(self):
+        return self._extrapolate
+
+    @extrapolate.setter
+    def extrapolate(self, extrapolate):
+        if not isinstance(extrapolate, np.ndarray) and not np.isscalar(extrapolate):
+            extrapolate = np.array(extrapolate)
+        if isinstance(extrapolate, np.ndarray):
+            if extrapolate.ndim == 1:
+                extrapolate = extrapolate[:,None]
+
+        self._extrapolate = np.broadcast_to(extrapolate, (self.xdim,2))
 
     def allocate_workspace_arrays(self, num_points):
         """
@@ -159,6 +174,9 @@ class NDSpline(object):
         """
         if not isinstance(x, np.ndarray):
             x = np.array(x)
+        else:
+            x = x.copy(order='C')
+
         if x.ndim == 1 and self.xdim==1: # multiple points in 1D space
             x = x[:, None]
         elif x.ndim == 1 and x.size == self.xdim: # 1 point in ND space
@@ -215,7 +233,7 @@ class NDSpline(object):
         t = knots[dim]
         c_left_selector = [slice(None)]*self.xdim + [...,]
         c_right_selector = [slice(None)]*self.xdim + [...,]
-        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim)
 
         with np.errstate(invalid='raise', divide='raise'):
             try:
@@ -266,15 +284,13 @@ class NDSpline(object):
         degrees = self.degrees.copy()
         knots = [knot.copy() for knot in self.knots]
         t = knots[dim]
-        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim-1 + self.ydim)
+        dt_shape = (None,)*dim + (slice(None),) + (None,)*(self.xdim-dim)
         left_pad_width = [(0,0)]*dim + [(1,0)] + [(0,0)]*(self.xdim-dim)
-        right_pad_width = [(0,0)]*dim + [(0,2)] + [(0,0)]*(self.xdim-dim)
         for j in range(nu):
             dt = (t[k+1:] - t[:-k-1])[dt_shape]
             # Compute the new coefficients
             coefficients = np.cumsum(coefficients * dt, axis=dim) / (k+1)
             coefficients = np.pad(coefficients, left_pad_width, 'constant')
-            # coefficients = np.pad(coefficients, right_pad_width, 'edge')
             # Adjust knots
             t = np.r_[t[0], t, t[-1]] 
             k += 1
@@ -310,9 +326,7 @@ class NDSpline(object):
         to_save_dict = {}
         for idx, knot in zip(range(self.xdim), self.knots):
             to_save_dict['knots_%d' % idx] = knot
-        to_save_dict['coefficients'] = self.coefficients
-        if self.squeeze:
-            to_save_dict['coefficients'] = self.coefficients[0, ...]
+        to_save_dict['coefficients'] = self.coefficients.reshape(self.coefficients.shape[:self.xdim] + self.yshape)
         to_save_dict['degrees'] = self.degrees
         to_save_dict['periodic'] = self.periodic
         to_save_dict['extrapolate'] = self.extrapolate
@@ -321,6 +335,45 @@ class NDSpline(object):
             np.savez_compressed(file, **to_save_dict)
         else:
             np.savez(file, **to_save_dict)
+
+    def copy(self):
+        """
+        Return a deep copy of this `NDSpline` object.
+
+        Returns
+        -------
+        b : NDSpline object
+            A deep copy of this spline.
+        """
+        return self.__class__(
+        [knot.copy() for knot in self.knots],
+        self.coefficients.copy(),
+        self.degrees.copy(),
+        self.periodic.copy(),
+        self.extrapolate.copy(),
+        )
+
+    def __eq__(self, other):
+        """
+        Determine equality with another spline.
+
+        Parameters
+        ----------
+        other : NDSpline object
+            Other spline to check equality with.
+        """
+        status = True
+        for knot_left, knot_right in zip(self.knots, other.knots):
+            status = status & np.allclose(knot_left, knot_right)
+
+        status = status & np.allclose(self.coefficients, other.coefficients)
+
+        status = status & np.all(self.degrees == other.degrees)
+        status = status & np.all(self.periodic == other.periodic)
+        status = status & np.all(self.extrapolate == other.extrapolate)
+        status = status & (self.yshape == other.yshape)
+        return status
+
 
 
 def from_file(file):
@@ -365,8 +418,7 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     degrees : ndarray, shape=(xdim,), dtype=np.int_                           
     w : array_like, shape (num_points,), optional
         Weights for spline fitting. Must be positive. If ``None``,
-        then weights are all equal.
-        Default is ``None``.
+        then weights are all equal. Default is ``None``.
 
     Returns
     -------
@@ -374,18 +426,17 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
         A least-squares `NDSpline`.
 
     """
-
     if x.ndim == 1:
         x = x[:, None]
     xdim = x.shape[1]
     num_points = x.shape[0]
 
-    yshape = y.shape[xdim:]
+    yshape = y.shape[1:]
     ydim = prod(yshape)
     y = y.reshape(num_points, ydim)
 
     # make slices c-contiguous
-    x = np.ascontiguousarray(x.T, dtype=np.float_).T
+    x = x.T.copy(order='C').T
     knot_shapes = tuple(knot.size - degree - 1 for knot, degree in zip(knots, degrees))
 
     temp_spline = NDSpline(knots, np.empty(knot_shapes + yshape), degrees)
@@ -398,7 +449,10 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
 
     observation_matrix = observation_tensor.reshape((num_points, -1))
 
-    # TODO: implemnet weighting matrix, which I think is just matrix multiply by diag(w) on left for both observation matrix and output.
+    if w is not None:
+        y = w[:, None]*y
+        observation_matrix = w[:, None] * observation_matrix
+
     lsq_coefficients, lsq_residuals, rank, singular_values = np.linalg.lstsq(observation_matrix, y, rcond=None)
 
     temp_spline.coefficients = lsq_coefficients.reshape(knot_shapes + yshape)
@@ -409,6 +463,25 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     return temp_spline
 
 def _not_a_knot(x, k, left=True, right=True):
+    """Utility function to perform the knot portion of the not-a-knot procedure.
+
+    Parameters
+    ----------
+    x : ndarray, shape=(n,), dtype=np.float_
+        Knot array to perform the not-a-knot procedure on
+    k : int
+        Degree of desired spline
+    left : bool
+        Whether to apply not-a-knot to the left side. Optional, default is True.
+    right : bool
+        Whether apply to not-a-knot to the right side. Optional, default is
+        True.
+
+    Returns
+    -------
+    t : ndarray
+        Knot array with left and/or right not-a-knot procedure applied.
+    """
     if k > 2 and k % 2 == 0:
         raise ValueError("Odd degree for now only. Got %s." % k)
     if k==0: # special case for k = 0, only apply to right
@@ -420,18 +493,7 @@ def _not_a_knot(x, k, left=True, right=True):
         t = np.r_[t[:-(k-1)//2 -1 or None], (t[-1],)*(k+1)]
     return t
 
-
-def _augknt(x, k, left=True, right=True):
-    t = x
-    if left:
-        t = np.r_[(t[0],)*k, t]
-    if right:
-        t = np.r_[t, (t[-1],)*k]
-    return t
-
-
-
-def make_interp_spline(x, y, bcs=0, degrees=3):
+def make_interp_spline(x, y, degrees=3):
     """Construct an interpolating B-spline.
 
     Parameters
@@ -440,13 +502,7 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
         arguments to np.meshgrid to construct same.
         Abscissas.
     y : array_like, shape (n_0, n_1, ..., n_(xdim-1),) + yshape
-        Ordinates. 
-    bcs : (list of) 2-tuples or 0
-        Boundary conditions. Each 2-tuple specifies the boundary condition as
-        (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
-        boundary condition. For a 0 degree spline, setting spec_value=0 for all
-        sides implements nearest-neighbor; a single side with spec_value=0
-        implements zero-order-hold from that direction. Optional, default is 0.
+        Ordinates.
     degrees : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable). Optional, 
         default is 3.
@@ -480,7 +536,7 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
     degrees = np.broadcast_to(degrees, (xdim,))
 
     # broadcasting does not play nicely with xdim as last axis for some reason
-    bcs = np.broadcast_to(bcs, (xdim, 2, 2))
+    bcs = np.broadcast_to(0, (xdim, 2, 2))
     deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=np.int)
     nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=np.bool)
 
@@ -549,8 +605,6 @@ def make_interp_spline(x, y, bcs=0, degrees=3):
 
         elif k != 0:
             t = _not_a_knot(x_slice, k, left_nak, right_nak)
-
-        t = _augknt(t, k, not left_nak, not right_nak)
 
         t = _as_float_array(t, check_finite)
 
@@ -667,7 +721,7 @@ except ImportError:
 else:
     check_pandas = True
 
-def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degrees=3):
+def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, degrees=3):
     """
     Construct an interpolating B-spline from a tidy data source. The tidy data
     source should be a complete matrix (see the tidy_data parameter description).
@@ -687,12 +741,6 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
     output_vars : iterable 
         Column names (for DataFrame) or indices (for np.ndarray) for output
         variables.
-    bcs : (list of) 2-tuples or 0
-        Boundary conditions. Each 2-tuple specifies the boundary condition as
-        (deriv_spec, spec_value) for a side. Use deriv_spec == 0 for not-a-knot
-        boundary condition. For a 0 degree spline, setting spec_value=0 for all
-        sides implements nearest-neighbor; a single side with spec_value=0
-        implements zero-order-hold from that direction. Optional, default is 0.
     degrees : ndarray, shape=(ndim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable). Optional, 
         default is 3.
@@ -723,4 +771,4 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, bcs=0, degr
 
     xdata = meshgrid_data[..., input_vars]
     ydata = meshgrid_data[..., output_vars]
-    return make_interp_spline(xdata, ydata, bcs, degrees)
+    return make_interp_spline(xdata, ydata, degrees)

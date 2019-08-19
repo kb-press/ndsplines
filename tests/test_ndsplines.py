@@ -1,10 +1,11 @@
 import pytest
 import ndsplines
 import numpy as np
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose, assert_equal
+from scipy import interpolate
+from scipy.stats import norm
 import itertools
-
-np.random.seed(0)
+from utils import get_query_points, assert_equal_splines, _make_random_spline
 
 #
 # Integration/Miscellaneous tests
@@ -62,7 +63,7 @@ def test_make_interp_x_vectors(n_vals):
 
     assert spl.xdim == len(n_vals)
     assert spl.ydim == 1
-    assert_almost_equal(spl(xgrid), y)
+    assert_allclose(spl(xgrid), y)
 
 
 @pytest.mark.parametrize('n_vals', [[10], [10, 12], [10, 12, 15]])
@@ -112,8 +113,25 @@ def test_make_interp_nn():
     x = np.arange(0, 1, dx)
     y = np.sin(2*np.pi*x)
 
-    spl = ndsplines.make_interp_spline(x, y, bcs=[(0, 0), (0, 0)], degrees=0)
+    spl = ndsplines.make_interp_spline(x, y, degrees=0)
 
     # samples at offsets less than dx/2 will be same as original values
     xx = x[:-1] + dx/4
-    assert_almost_equal(spl(xx), spl(x[:-1]))
+    assert_allclose(spl(xx), spl(x[:-1]))
+
+
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
+    _make_random_spline(4, periodic=None, extrapolate=None),
+])
+def test_file_io(ndspline):
+    """ verify lossless file i/o """
+    b = ndspline
+    fname = 'test_file_io.npz'
+    b.to_file(fname, True)
+    assert_equal_splines(b, ndsplines.from_file(fname))
+    b.to_file(fname, False)
+    assert_equal_splines(b, ndsplines.from_file(fname))
+

@@ -28,28 +28,6 @@ x = np.linspace(0, 1, 9)
 xx = np.linspace(-.0625, 1.0625, 1024)
 k = 3
 
-
-scipy_test_bcs = np.array(list(itertools.chain(
-    itertools.product(["natural", "clamped", ], repeat=2),
-    ((None,None),),
-)))
-
-k0_bcs = np.array(list(
-itertools.product([(0,0), (0,-1)], repeat=2)
-)[:-1])[[-1,0,1]]
-
-NDspline_dict = {"natural": ndsplines.pinned, "clamped": ndsplines.clamped, "not-a-knot": ndsplines.notaknot}
-
-ndsplines_test_bcs = np.array([(NDspline_dict[item[0]], NDspline_dict[item[1]],)  for item in itertools.chain(
-    itertools.product(["natural", "clamped", ], repeat=2),
-    (("not-a-knot","not-a-knot"),),
-    itertools.product(["not-a-knot"],["natural", "clamped", ]),
-    itertools.product(["natural", "clamped", ], ["not-a-knot"]),
-)])
-
-NDspline_bc_to_string = {tuple(v):k for k,v in NDspline_dict.items()}
-NDspline_bc_to_string[(0,-1)] = 'one-sided hold'
-
 for degree in range(1,4):
     for func in funcs:
         fvals = func(x)
@@ -62,42 +40,27 @@ for degree in range(1,4):
         plot_sel = slice(None)
     
         plt.gca().set_prop_cycle(None)
-    
-        for test_bc in scipy_test_bcs[plot_sel,:]:
-            try:
-                test_Bspline = interpolate.make_interp_spline(x, fvals, bc_type=list(test_bc), k=degree)
-            except ValueError:
-                continue
-            else:
-                splinef = test_Bspline(xx.copy(), extrapolate=True)
-                axes[0].plot(xx, splinef, '--', lw=3.0, label=str(test_bc) + ' (BSpline)')
-                if degree > 0:
-                    der_Bspline = test_Bspline.derivative()
-                    axes[1].plot(xx, der_Bspline(xx.copy()), '--', lw=3.0, label='(BSpline)')
-                antider_Bspline = test_Bspline.antiderivative()
-                axes[-1].plot(xx, antider_Bspline(xx.copy()), '--', lw=3.0, label='(BSpline)')
+        test_Bspline = interpolate.make_interp_spline(x, fvals, k=degree)
+        splinef = test_Bspline(xx.copy(), extrapolate=True)
+        axes[0].plot(xx, splinef, '--', lw=3.0, label='BSpline')
+        if degree > 0:
+            der_Bspline = test_Bspline.derivative()
+            axes[1].plot(xx, der_Bspline(xx.copy()), '--', lw=3.0, label='BSpline')
+        antider_Bspline = test_Bspline.antiderivative()
+        axes[-1].plot(xx, antider_Bspline(xx.copy()), '--', lw=3.0, label='BSpline')
 
         for ax in axes:
             ax.set_prop_cycle(None)
-        
-        if degree == 0:
-            bc_iter = k0_bcs
-        else:
-            bc_iter = ndsplines_test_bcs
-        for test_bc in bc_iter[plot_sel,:]:
-            try:
-                test_NDBspline = ndsplines.make_interp_spline(x, fvals, bcs=test_bc, degrees=degree)
-            except ValueError:
-                continue
-            else:
-                NDsplinef = test_NDBspline(xx.copy())
-                axes[0].plot(xx, NDsplinef, label=', '.join([NDspline_bc_to_string[tuple(bc)] for bc in test_bc]) + ' (ndspline)' )
-                if degree>0:
-                    der_NDspline = test_NDBspline.derivative(0)
-                    axes[1].plot(xx, der_NDspline(xx.copy()), label='(ndspline)' )
-                antider_NDspline = test_NDBspline.antiderivative(0)
-                axes[-1].plot(xx, antider_NDspline(xx.copy()), label='(ndspline)')
-    
+        test_NDBspline = ndsplines.make_interp_spline(x, fvals, degrees=degree)
+
+        NDsplinef = test_NDBspline(xx.copy())
+        axes[0].plot(xx, NDsplinef, label='ndspline' )
+        if degree>0:
+            der_NDspline = test_NDBspline.derivative(0)
+            axes[1].plot(xx, der_NDspline(xx.copy()), label='ndspline' )
+        antider_NDspline = test_NDBspline.antiderivative(0)
+        axes[-1].plot(xx, antider_NDspline(xx.copy()), label='ndspline')
+
         
         axes[0].plot(xx, truef, 'k--', label="True " + func.__name__)
         axes[0].plot(x, fvals, 'ko')

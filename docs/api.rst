@@ -14,6 +14,8 @@ Methods of the :doc:`api/ndsplines.NDSpline` class.
     ~ndsplines.NDSpline.derivative
     ~ndsplines.NDSpline.antiderivative
     ~ndsplines.NDSpline.to_file
+    ~ndsplines.NDSpline.copy
+    ~ndsplines.NDSpline.__eq__
    
 
 .. rubric:: Creation routines
@@ -27,6 +29,15 @@ Routines for creating ``NDSpline`` objects.
     ~ndsplines.make_interp_spline
     ~ndsplines.make_interp_spline_from_tidy
     ~ndsplines.from_file
+
+.. rubric:: Knots
+
+Utility function for constructing knot arrays.
+
+.. autosummary::
+    :toctree: api
+
+    ~ndsplines._not_a_knot
 
 .. rubric:: Implementations
 

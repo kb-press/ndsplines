@@ -33,13 +33,23 @@ steps:
 
 - script: |
     python -m pip install --upgrade pip
-    pip install -r requirements.txt
+    python -m pip install -r requirements.txt
     pip list
   displayName: 'Install dependencies'
 
 - script: |
-    pip install pytest pytest-azurepipelines
+    python -m pip install pytest pytest-azurepipelines pytest-cov pandas
     python setup.py build
     python setup.py install
+  displayName: 'Install Test dependencies'
+
+- script: |
     pytest -sv
   displayName: 'Test'
+  condition: ne('Job Linux_Py36', variables['Agent.JobName'])
+
+- script: |
+    pytest -sv --cov=./
+    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
+  displayName: 'Test With Coverage'
+  condition: eq('Job Linux_Py36', variables['Agent.JobName'])

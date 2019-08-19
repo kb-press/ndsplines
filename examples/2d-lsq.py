@@ -5,6 +5,7 @@
 """
 
 import ndsplines 
+from scipy import interpolate
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -30,15 +31,13 @@ xt = np.r_[(x[0],)*(k+1),
 yt = np.r_[(y[0],)*(k+1),
           yt,
           (y[-1],)*(k+1)]
+          
 ts = [xt, yt]
 
-spl = ndsplines.make_lsq_spline(input_coords.reshape((-1,2)), meshz.reshape((-1,1)), ts, np.array([3,3]))
-# spl.coefficients = spl.coefficients.swapaxes(0,1)
-# plt.figure()
-# plt.contour(meshx, meshy, meshz)
-# plt.contour(meshx, meshy, spl(input_coords)[...,0])
-# plt.show()
+samplex = input_coords.reshape((-1,2))
+sampley = meshz.reshape((-1))
 
+spl = ndsplines.make_lsq_spline(samplex, sampley, ts, np.array([3,3]))
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
