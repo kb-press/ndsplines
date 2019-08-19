@@ -42,7 +42,7 @@ steps:
     pip install pytest pytest-azurepipelines pytest-cov
     python setup.py build
     python setup.py install
-    python -m pytest -sv --cov=./
+    pytest -sv --cov=./
   displayName: 'Test'
 
 - script: |
