@@ -99,7 +99,6 @@ def test_nd_make_lsq(ndspline):
          for t in ndspline.knots],
         indexing='ij'), axis=-1)
     knot_sample_y = ndspline(knot_sample_x.copy())
-    print(knot_sample_x)
     nspl = ndsplines.make_interp_spline(knot_sample_x, knot_sample_y, k)
 
     N = int(3*knot_sample_x.size**(1/nspl.xdim))
@@ -109,7 +108,6 @@ def test_nd_make_lsq(ndspline):
 
 
     sample_y = nspl(sample_x)
-    print(sample_x.shape, sample_y.shape)
 
     nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
     assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)

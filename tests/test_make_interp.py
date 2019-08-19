@@ -66,7 +66,6 @@ def test_nd_make_interp(ndspline):
         indexing='ij'), axis=-1)
     knot_sample_y = nspl(knot_sample_x)
 
-    print(nspl.yshape, ndspline.yshape)
     nspl2 = ndsplines.make_interp_spline(sample_x, sample_y, k)
     assert_equal_splines(nspl, nspl2)
 
