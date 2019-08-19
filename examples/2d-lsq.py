@@ -31,36 +31,13 @@ xt = np.r_[(x[0],)*(k+1),
 yt = np.r_[(y[0],)*(k+1),
           yt,
           (y[-1],)*(k+1)]
-
-# xt = np.array([-3, -1, 0, 1, 3])
-# yt = [-3, -1, 0, 1, 3]
-xt = np.r_[(-3.5,)*(k+1), -3,
-          -1, 0, 1, 3,
-          (3.5,)*(k+1)]
-yt = np.r_[(-3.5,)*(k+1), -3,
-          -1, 0, 1, 3,
-          (3.5,)*(k+1)]
           
-xt = np.r_[-3.125:3.125:8j]
-yt = np.r_[-3.125:3.125:8j]
 ts = [xt, yt]
 
 samplex = input_coords.reshape((-1,2))
-sampley = meshz.reshape((-1,1))
+sampley = meshz.reshape((-1))
 
 spl = ndsplines.make_lsq_spline(samplex, sampley, ts, np.array([3,3]))
-
-
-ispl = interpolate.LSQBivariateSpline(
-    samplex[:, 0].squeeze(),
-    samplex[:, 1].squeeze(), sampley.squeeze(), xt, yt) #   , kx=k, ky=k)
-
-# spl.coefficients = spl.coefficients.swapaxes(0,1)
-# plt.figure()
-# plt.contour(meshx, meshy, meshz)
-# plt.contour(meshx, meshy, spl(input_coords)[...,0])
-# plt.show()
-
 
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
