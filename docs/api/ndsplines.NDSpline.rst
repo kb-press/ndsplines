@@ -16,7 +16,8 @@
       ~NDSpline.derivative
       ~NDSpline.antiderivative
       ~NDSpline.to_file
-   
+      ~NDSpline.copy
+      ~NDSpline.__eq__
    
 
    

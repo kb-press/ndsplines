@@ -14,6 +14,8 @@ Methods of the :doc:`api/ndsplines.NDSpline` class.
     ~ndsplines.NDSpline.derivative
     ~ndsplines.NDSpline.antiderivative
     ~ndsplines.NDSpline.to_file
+    ~ndsplines.NDSpline.copy
+    ~ndsplines.NDSpline.__eq__
    
 
 .. rubric:: Creation routines
