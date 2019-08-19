@@ -7,9 +7,8 @@ from scipy.interpolate._bsplines import (prod, _as_float_array,
 
 from ndsplines import _npy_bspl
 
-__all__ = ['impl', 'NDSpline', '_not_a_knot', '_augknt',
-           'make_interp_spline', 'make_lsq_spline',
-           'make_interp_spline_from_tidy', 'from_file']
+__all__ = ['impl', 'NDSpline', '_not_a_knot', 'make_interp_spline', 
+           'make_lsq_spline', 'make_interp_spline_from_tidy', 'from_file']
 
 impl = _npy_bspl
 
@@ -494,37 +493,6 @@ def _not_a_knot(x, k, left=True, right=True):
         t = np.r_[t[:-(k-1)//2 -1 or None], (t[-1],)*(k+1)]
     return t
 
-
-def _augknt(x, k, left=True, right=True):
-    """Utility function to perform knot augmentation.
-
-    Parameters
-    ----------
-    x : ndarray, shape=(n,), dtype=np.float_
-        Knot array to perform the not-a-knot procedure on
-    k : int
-        Degree of desired spline
-    left : bool
-        Whether to apply knot augmentation to the left side. Optional, default is 
-        True.
-    right : bool
-        Whether to apply knot augmentation to the right side. Optional, default 
-        is True.
-
-    Returns
-    -------
-    t : ndarray
-        Knot array with left and/or right knot augmentation applied.
-    """
-    t = x
-    if left:
-        t = np.r_[(t[0],)*k, t]
-    if right:
-        t = np.r_[t, (t[-1],)*k]
-    return t
-
-
-
 def make_interp_spline(x, y, degrees=3):
     """Construct an interpolating B-spline.
 
@@ -637,8 +605,6 @@ def make_interp_spline(x, y, degrees=3):
 
         elif k != 0:
             t = _not_a_knot(x_slice, k, left_nak, right_nak)
-
-        t = _augknt(t, k, not left_nak, not right_nak)
 
         t = _as_float_array(t, check_finite)
 

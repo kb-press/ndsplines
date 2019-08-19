@@ -30,15 +30,14 @@ Routines for creating ``NDSpline`` objects.
     ~ndsplines.make_interp_spline_from_tidy
     ~ndsplines.from_file
 
-.. rubric:: Knot utilities
+.. rubric:: Knots
 
-Utility functions for constructing knot arrays.
+Utility function for constructing knot arrays.
 
 .. autosummary::
     :toctree: api
-    
+
     ~ndsplines._not_a_knot
-    ~ndsplines._augknt
 
 .. rubric:: Implementations
 
