@@ -46,5 +46,5 @@ steps:
   displayName: 'Test'
 
 - script: |
-    bash <(curl -s https://codecov.io/bash)
+    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Upload coverage report'
