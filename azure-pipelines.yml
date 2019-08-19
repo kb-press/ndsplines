@@ -33,14 +33,18 @@ steps:
 
 - script: |
     python -m pip install --upgrade pip
-    pip install -r requirements.txt
+    python -m pip install -r requirements.txt
     python -m pip install pandas
     pip list
   displayName: 'Install dependencies'
 
 - script: |
-    pip install pytest pytest-azurepipelines
+    pip install pytest pytest-azurepipelines pytest-cov
     python setup.py build
     python setup.py install
-    pytest -sv
+    python -m pytest -sv --cov=./
   displayName: 'Test'
+
+- script: |
+    bash <(curl -s https://codecov.io/bash)
+  displayName: 'Upload coverage report'
