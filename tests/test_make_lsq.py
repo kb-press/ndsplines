@@ -17,28 +17,34 @@ def test_1d_make_lsq(ndspline):
     sample_x = np.sort(get_query_points(ndspline, n=N).squeeze())
     sample_y = ndspline(sample_x)
     signal_rms = (sample_y**2).sum(axis=0)/N
-    snr_ratio = 100
+    snr_ratio = 10
     sample_y = sample_y + (signal_rms/snr_ratio)*np.random.random(sample_y.shape)
     # it was non-trivial to figure out the proper parameters for
     # scipy.interpolate. It needed specific knot sequence (possibly other 
     # solutions) and sorted sample data. ndspline did not need either.
     for k in range(0, 4):
-        print(k)
-        if (ndspline.degrees[0] == 3) and (k<3):
-            print('skipping')
-            continue
         knots = np.r_[(0.0,)*(k+1), 0.25, 0.5, 0.75, (1.0,)*(k+1)]
 
         # unweighted
         nspl = ndsplines.make_lsq_spline(sample_x, sample_y.copy(), [knots], [k])
-        ispl = interpolate.make_lsq_spline(sample_x, sample_y.copy(), knots, k)
-        assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
+        try:
+            ispl = interpolate.make_lsq_spline(sample_x, sample_y.copy(), knots, k)
+        except np.linalg.linalg.LinAlgError as e:
+            if "leading minor" in e.__repr__():
+                print(e)
+        else:
+            assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
 
         # random weights
         w = np.random.random(N)
         nspl = ndsplines.make_lsq_spline(sample_x, sample_y, [knots], [k], w)
-        ispl = interpolate.make_lsq_spline(sample_x, sample_y, knots, k, w)
-        assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
+        try:
+            ispl = interpolate.make_lsq_spline(sample_x, sample_y, knots, k, w)
+        except np.linalg.linalg.LinAlgError as e:
+            if "leading minor" in e.__repr__():
+                print(e)
+        else:
+            assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
 
 # 
 # construct a valid spline. We expect this to fail.

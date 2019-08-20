@@ -6,9 +6,8 @@ np.random.seed(123)
 def get_query_points(ndspline, n=1024):
     knot_minmax = np.empty((2, ndspline.xdim))
     for i in range(ndspline.xdim):
-        k = ndspline.degrees[i]*0
-        knot_minmax[0, i] = ndspline.knots[i][k]
-        knot_minmax[1, i] = ndspline.knots[i][-k-1]
+        knot_minmax[0, i] = ndspline.knots[i][0]
+        knot_minmax[1, i] = ndspline.knots[i][-1]
     query_points = np.random.rand(n, ndspline.xdim,)
     query_points[...] = query_points[...] * np.diff(knot_minmax, axis=0) + knot_minmax[0]
     return query_points
@@ -35,7 +34,7 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
     if yshape is None:
         yshape = tuple(np.random.randint(1, ymax, size=ydim))
     for i in range(xdim):
-        ns.append(np.random.randint(2*min(ks[i]+1,3),11))
+        ns.append(np.random.randint(2*min(ks[i]+1,4),11))
         ts.append(np.sort(np.random.rand(ns[i]+ks[i]+1)))
     c = np.random.rand(*ns,*yshape)
     return ndsplines.NDSpline(ts, c, ks, periodic, extrapolate)

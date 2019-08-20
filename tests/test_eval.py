@@ -102,5 +102,5 @@ def test_nd_eval(ndspline):
             np_res = ndspline(query_points, nus)
                 
             assert_allclose(cy_res, np_res)
-
         nus[i] = 0
+    ndsplines.set_impl('cython')
