@@ -7,10 +7,9 @@ from utils import (get_query_points, assert_equal_splines, _make_random_spline,
     get_grid_data)
 
 @pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1, yshape=(1,)),
-    _make_random_spline(1, yshape=(1,)),
-    _make_random_spline(1, yshape=(1,)),
-    _make_random_spline(1, yshape=(1,)),
+    _make_random_spline(1, k=0, yshape=(1,)),
+    _make_random_spline(1, k=1, yshape=(1,)),
+    _make_random_spline(1, k=2, yshape=(1,)),
 ])
 def test_1d_make_lsq(ndspline):
     N = 100
@@ -18,12 +17,16 @@ def test_1d_make_lsq(ndspline):
     sample_x = np.sort(get_query_points(ndspline, n=N).squeeze())
     sample_y = ndspline(sample_x)
     signal_rms = (sample_y**2).sum(axis=0)/N
-    snr_ratio = 10
-    sample_y = sample_y + signal_rms/snr_ratio*np.random.random(sample_y.shape)
+    snr_ratio = 100
+    sample_y = sample_y + (signal_rms/snr_ratio)*np.random.random(sample_y.shape)
     # it was non-trivial to figure out the proper parameters for
     # scipy.interpolate. It needed specific knot sequence (possibly other 
     # solutions) and sorted sample data. ndspline did not need either.
-    for k in range(4):
+    for k in range(0, 4):
+        print(k)
+        if (ndspline.degrees[0] == 3) and (k<3):
+            print('skipping')
+            continue
         knots = np.r_[(0.0,)*(k+1), 0.25, 0.5, 0.75, (1.0,)*(k+1)]
 
         # unweighted
@@ -111,7 +114,6 @@ def test_nd_make_lsq(ndspline):
 
     nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
     assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-4)
-    # assert_equal_splines(nlsq, nspl)
     
     sample_y_orig = sample_y
     signal_rms = (sample_y**2).sum(axis=0)/sample_x.size
