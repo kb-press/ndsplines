@@ -110,15 +110,22 @@ def test_nd_make_lsq(ndspline):
     sample_y = nspl(sample_x)
 
     nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
-    assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
+    assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-4)
     # assert_equal_splines(nlsq, nspl)
     
     sample_y_orig = sample_y
     signal_rms = (sample_y**2).sum(axis=0)/sample_x.size
 
-    snr_ratio = 10**(nspl.xdim+3)
-    sample_y = sample_y_orig + signal_rms[None, :]/snr_ratio*np.random.random(sample_y.shape)
-    nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
-    # assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
-    assert np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)<snr_ratio
+    N_samples = 4
+    set_snrs = np.empty(N_samples)
+    eval_snrs = np.empty(N_samples)
+
+    for snr_exp in range(N_samples):
+        snr_ratio = 10**(0*nspl.xdim+snr_exp)
+        sample_y = sample_y_orig + signal_rms[None, :]/snr_ratio*np.random.random(sample_y.shape)
+        nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
+        # assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
+        eval_snrs[snr_exp] = np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)
+        set_snrs[snr_exp] = snr_ratio
+    assert (np.diff(np.log10(eval_snrs)).mean() < -0.9)
     

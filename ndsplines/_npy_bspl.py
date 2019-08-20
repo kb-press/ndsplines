@@ -44,23 +44,24 @@ def find_interval(t, k, xvals, extrapolate=False, workspace=None):
             (workspace.shape[1] < s)):
         workspace = np.empty((t.shape[0], s), dtype=np.intc)
     
-    ell = workspace[0,:s]
+    ell = np.empty(s, dtype=np.intc)
 
     # TODO: I am assuming memory is cheap and I don't get much for typing
     # the test array as bool_ vs intc
-    test = workspace[1:t.shape[0],:s]
+    test = np.empty((t.shape[0] - 2*k - 2, s), dtype=np.intc) # workspace[1:t.shape[0],:s]
 
     ell[:] = -1
-    test[:,:s] = (t[:-1,None] <= xvals[None,:]) & (xvals[None,:] < t[1:,None])
+    test[:,:s] = (t[k:-k-2,None] <= xvals[None,:]) & (xvals[None,:] < t[k+1:-k-1,None])
     
     if extrapolate:
-        test[k,:s] = test[k,:s] | (xvals < t[k])
-        test[-k-1,:s] = test[-k-1,:s] | (t[-k-1] <= xvals)
+        test[0,:s] = test[0,:s] | (xvals < t[k])
+        test[-1,:s] = test[-1,:s] | (t[-k-1] <= xvals)
+    print(test.shape, k)
 
     # TODO: can we pre-allocate this? or is there a better way to implement
     # this whole function?
     where_test = np.nonzero(test)
-    ell[where_test[1]] = where_test[0]
+    ell[where_test[1]] = where_test[0] + k
 
     return ell
 

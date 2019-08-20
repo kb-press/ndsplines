@@ -75,3 +75,32 @@ def test_2d_eval(ndspline):
             bs_res = bs(query_points[:,0], query_points[:,1], 0, nuy, grid=False)
 
             assert_allclose(bn_res, bs_res)
+
+
+@pytest.mark.parametrize('ndspline', [
+    _make_random_spline(1, periodic=None, extrapolate=None),
+    _make_random_spline(2, periodic=None, extrapolate=None),
+    _make_random_spline(3, periodic=None, extrapolate=None),
+])
+def test_nd_eval(ndspline):
+    query_points = get_query_points(ndspline)
+    nus = np.zeros((ndspline.xdim), dtype=np.int)
+    ndsplines.set_impl('cython')
+    cy_res = ndspline(query_points)
+    ndsplines.set_impl('numpy')
+    np_res = ndspline(query_points)
+
+    assert_allclose(cy_res, np_res)
+    for i in range(ndspline.xdim):
+        for der in range(ndspline.degrees[i]):
+            nus[i] = der
+
+            ndsplines.set_impl('cython')
+            cy_res = ndspline(query_points, nus)
+
+            ndsplines.set_impl('numpy')
+            np_res = ndspline(query_points, nus)
+                
+            assert_allclose(cy_res, np_res)
+
+        nus[i] = 0
