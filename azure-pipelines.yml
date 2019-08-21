@@ -6,21 +6,21 @@ strategy:
     Linux_Py36:
       imageName: 'ubuntu-16.04'
       python.version: '3.6'
-    Windows_Py36:
-      imageName: 'vs2017-win2016'
-      python.version: '3.6'
-    Mac_Py36:
-      imageName: 'macOS-10.13'
-      python.version: '3.6'
-    Linux_Py37:
-      imageName: 'ubuntu-16.04'
-      python.version: '3.7'
-    Windows_Py37:
-      imageName: 'vs2017-win2016'
-      python.version: '3.7'
-    Mac_Py37:
-      imageName: 'macOS-10.13'
-      python.version: '3.7'
+    #Windows_Py36:
+    #  imageName: 'vs2017-win2016'
+    #  python.version: '3.6'
+    #Mac_Py36:
+    #  imageName: 'macOS-10.13'
+    #  python.version: '3.6'
+    #Linux_Py37:
+    #  imageName: 'ubuntu-16.04'
+    #  python.version: '3.7'
+    #Windows_Py37:
+    #  imageName: 'vs2017-win2016'
+    #  python.version: '3.7'
+    #Mac_Py37:
+    #  imageName: 'macOS-10.13'
+    #  python.version: '3.7'
 
 pool:
   vmImage: $(imageName)
@@ -49,7 +49,7 @@ steps:
   condition: ne('Job Linux_Py36', variables['Agent.JobName'])
 
 - script: |
-    pytest -sv --cov=ndsplines tests
+    pytest -sv --cov=ndsplines tests/
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Test With Coverage'
   condition: eq('Job Linux_Py36', variables['Agent.JobName'])
