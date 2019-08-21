@@ -50,6 +50,6 @@ steps:
 
 - script: |
     python -m pytest --cov ndsplines/ tests/
-    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN) -f./cov.xml
+    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Test With Coverage'
   condition: eq('Job Linux_Py36', variables['Agent.JobName'])
