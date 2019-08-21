@@ -5,15 +5,23 @@ from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
 from utils import get_query_points, assert_equal_splines, _make_random_spline
 
-@pytest.mark.parametrize('ndspline', 
-    [_make_random_spline(1, kx,) for kx in range(4) ]  
-    + [_make_random_spline(2, [kx, ky]) for kx in range(1,4) for ky in range(1,4)] 
-    + [_make_random_spline(3, [kx, ky, kz]) 
-       for kx in range(1,4) for ky in range(1,4) for kz in range(1,4)]
+@pytest.fixture(
+    params=[_make_random_spline(1, kx,) for kx in range(4) ] + \
+    [_make_random_spline(2, [kx, ky]) for kx in range(1,4) for ky in range(1,4)] + \
+    [_make_random_spline(3, [kx, ky, kz]) 
+       for kx in range(1,4) for ky in range(1,4) for kz in range(1,4)],
 )
-def test_calculus(ndspline):
+def next_ndspline(request):
+    return request.param
+
+@pytest.fixture(params=['cython', 'numpy'])
+def impl(request):
+    return request.param
+
+def test_calculus(next_ndspline, impl):
     """ verify calculus properties """
-    b = ndspline
+    ndsplines.set_impl(impl)
+    b = next_ndspline
     query_points = get_query_points(b)
     nus = np.zeros((b.xdim), dtype=np.int)
     for i in range(b.xdim):
@@ -52,3 +60,4 @@ def test_calculus(ndspline):
             assert_equal_splines(der_b_ij, der_b_ji)
 
         nus[i] = 0
+    ndsplines.set_impl('cython')
