@@ -49,7 +49,7 @@ steps:
   condition: ne('Job Linux_Py36', variables['Agent.JobName'])
 
 - script: |
-    pytest tests/ --cov=ndsplines –-no-coverage-upload –cov-report=xml
-    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
+    pytest tests/ --cov=ndsplines -–cov-report=xml:./cov.xml
+    bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN) -f./cov.xml
   displayName: 'Test With Coverage'
   condition: eq('Job Linux_Py36', variables['Agent.JobName'])
