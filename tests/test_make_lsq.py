@@ -135,5 +135,5 @@ def test_nd_make_lsq(ndspline):
         # assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
         eval_snrs[snr_exp] = np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)
         set_snrs[snr_exp] = snr_ratio
-    assert (np.diff(np.log10(eval_snrs)).mean() < -0.9)
+    assert (np.diff(np.log10(eval_snrs)).mean() < np.diff(np.log10(set_snrs)).mean()/2)
     
