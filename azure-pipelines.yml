@@ -64,18 +64,20 @@ steps:
 
 # TODO install from requirements-dev.txt?
 - script: |
-    python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
-    python -m pip install pytest pytest-azurepipelines pytest-cov pandas
-    python -m pip list
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pytest pytest-azurepipelines pytest-cov pandas
+    pip list
   displayName: 'Install dependencies'
 
+# Install editable so code coverage works
 - script: |
-    python -m pip install . -v
+    pip install -e .
   displayName: 'Build and install'
+  failOnStderr: true
 
 - script: |
-    pytest -sv --cov ndsplines tests/
+    pytest -sv --cov ndsplines
   displayName: 'Test'
 
 - script: |
