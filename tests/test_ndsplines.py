@@ -25,7 +25,6 @@ def test_evaluate_spline_different_impls():
 #
 # Scipy compatibility tests
 #
-
 def test_make_interp_scipy_compat():
     """Basic test of compatibility with scipy.interpolate API."""
     x = np.linspace(0, 1, 10)
@@ -35,7 +34,6 @@ def test_make_interp_scipy_compat():
 
 
 # Input/output API tests
-
 def test_make_interp_invalid_x():
     """Bad input raises ValueError."""
     with pytest.raises(ValueError):

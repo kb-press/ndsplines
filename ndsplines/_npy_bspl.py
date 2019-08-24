@@ -104,7 +104,6 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
     
     
     basis_workspace = basis_workspace.T
-    do_return = False
     if (not isinstance(basis_workspace, np.ndarray) or 
             (basis_workspace.dtype != np.float_) or
             (basis_workspace.shape[0] < 2*k+2) or
@@ -114,13 +113,10 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
     u = basis_workspace[:k+1,:s]
     w = basis_workspace[k+1:2*k+2,:s]
     bounds = np.empty((2,s), dtype=np.float_)
-    
-    if k > 0:
-        w[0,...] = 1.0
-    else:
-        u[0,...] = 1.0
 
+    u[0,...] = 1.0
     for j in range(1, k-nu+1):
+        w[:j] = u[:j].copy()
         u[0,:] = 0
         for n in range(1, j+1):
             index = ell+n
@@ -138,27 +134,20 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
             u[n-1, neq_test] += tau*(xb - xx)
             u[n, neq_test] = tau*(xx - xa)
 
-        w[:k] = u[:k].copy()
-
     for j in range(k-nu+1, k+1):
+        w[:j] = u[:j].copy()
         u[0,:] = 0
         for n in range(1, j+1):
             index = ell+n
             bounds[0, :] = t[index]
             bounds[1, :] = t[index-j]
             neq_test = bounds[0, :] != bounds[1, :]
-            u[n, ~neq_test] = 0.0 # __fitpack.h has h[m] = 0.0 here...
+            u[nu, ~neq_test] = 0.0
 
             xb = bounds[0, neq_test]
             xa = bounds[1, neq_test]
-            xx = xvals[neq_test]
             tau = j*w[n-1, neq_test]/(xb-xa)
             u[n-1, neq_test] -= tau
             u[n, neq_test] = tau
 
-        w[:k] = u[:k].copy()
-
     interval_workspace[:s] = ell - k
-
-    if do_return:
-        return u

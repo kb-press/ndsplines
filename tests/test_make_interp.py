@@ -5,7 +5,7 @@ import pandas as pd
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
 from utils import (get_query_points, assert_equal_splines, _make_random_spline,
-    get_grid_data)
+    get_grid_data, un_knot_a_knot)
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1),
@@ -41,7 +41,6 @@ def test_2d_make_interp(ndspline):
             ispl = interpolate.RectBivariateSpline(sample_x[:, 0, 0], sample_x[0, :, 1], sample_y, kx=kx, ky=ky)
             assert_allclose(nspl.coefficients.reshape(-1), ispl.get_coeffs().reshape(-1))
 
-
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1, periodic=None, extrapolate=None),
     _make_random_spline(2, periodic=None, extrapolate=None),
@@ -49,24 +48,27 @@ def test_2d_make_interp(ndspline):
     _make_random_spline(4, periodic=None, extrapolate=None),
 ])
 def test_nd_make_interp(ndspline):
-    sample_x = get_grid_data(*[knot.size for knot in ndspline.knots])
+    sample_x = get_grid_data(*[t.size-k-1 
+            for t, k in zip(ndspline.knots, ndspline.degrees)])
     sample_y = ndspline(sample_x)
-
+    
     k = 3
-    # TODO: figure out how to loop
 
     # does it interpolate?
+    # TODO: figure out how to loop degrees
+
     nspl = ndsplines.make_interp_spline(sample_x, sample_y, k)
     assert_allclose(sample_y, nspl(sample_x))
     
-    # can you re-create this spline?
+    # can make_interp_spline recreate a spline with known knots? (same spline space)
+    knots_to_reproduce = un_knot_a_knot(nspl.knots, nspl.degrees)
     knot_sample_x = np.stack(np.meshgrid(
-        *[np.r_[t[0], (t[0]+t[k+1])/2, t[k+1:-k-1], (t[-k-2]+t[-1])/2, t[-1]] 
-         for t in nspl.knots],
+        *knots_to_reproduce,
         indexing='ij'), axis=-1)
     knot_sample_y = nspl(knot_sample_x)
+    
 
-    nspl2 = ndsplines.make_interp_spline(sample_x, sample_y, k)
+    nspl2 = ndsplines.make_interp_spline(knot_sample_x, knot_sample_y, nspl.degrees)
     assert_equal_splines(nspl, nspl2)
 
     # can you use a tidy dataformat?
