@@ -3,8 +3,8 @@ import ndsplines
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
-from utils import (get_query_points, assert_equal_splines, _make_random_spline,
-    get_grid_data)
+from .utils import (get_query_points, assert_equal_splines, _make_random_spline,
+    get_grid_data, un_knot_a_knot)
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1, k=0, yshape=(1,)),
@@ -102,19 +102,24 @@ def test_2d_make_lsq(ndspline):
     _make_random_spline(3, periodic=None, extrapolate=None),
 ])
 def test_nd_make_lsq(ndspline):
+    sample_x = get_grid_data(*[t.size-k-1 
+            for t, k in zip(ndspline.knots, ndspline.degrees)])
+    sample_y = ndspline(sample_x)
+
     k = 3
+    nspl = ndsplines.make_interp_spline(sample_x, sample_y, k)
+
+    knots_to_reproduce =un_knot_a_knot(nspl.knots, nspl.degrees)
     knot_sample_x = np.stack(np.meshgrid(
-        *[np.r_[t[0], (t[0]+t[k+1])/2, t[k+1:-k-1], (t[-k-2]+t[-1])/2, t[-1]] 
-         for t in ndspline.knots],
+        *knots_to_reproduce,
         indexing='ij'), axis=-1)
-    knot_sample_y = ndspline(knot_sample_x.copy())
+    knot_sample_y = ndspline(knot_sample_x)
+
     nspl = ndsplines.make_interp_spline(knot_sample_x, knot_sample_y, k)
 
-    N = int(3*knot_sample_x.size**(1/nspl.xdim))
     sample_x = np.stack(np.meshgrid(*[
-        np.linspace(0,1, N) for i in range(nspl.xdim)],
+        np.linspace(0,1, int(1.5*nspl.xshape[i])) for i in range(nspl.xdim)],
          indexing='ij'), axis=-1).reshape((-1, nspl.xdim))
-
 
     sample_y = nspl(sample_x)
 
@@ -132,7 +137,6 @@ def test_nd_make_lsq(ndspline):
         snr_ratio = 10**(0*nspl.xdim+snr_exp)
         sample_y = sample_y_orig + signal_rms[None, :]/snr_ratio*np.random.random(sample_y.shape)
         nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
-        # assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-5)
         eval_snrs[snr_exp] = np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)
         set_snrs[snr_exp] = snr_ratio
     assert (np.diff(np.log10(eval_snrs)).mean() < np.diff(np.log10(set_snrs)).mean()/2)

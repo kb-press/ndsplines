@@ -3,7 +3,7 @@ import ndsplines
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
-from utils import get_query_points, assert_equal_splines, _make_random_spline
+from .utils import get_query_points, assert_equal_splines, _make_random_spline
 
 @pytest.mark.parametrize('ndspline', [
     _make_random_spline(1, 0, ydim=1),
@@ -77,11 +77,11 @@ def test_2d_eval(ndspline):
             assert_allclose(bn_res, bs_res)
 
 
-@pytest.mark.parametrize('ndspline', [
-    _make_random_spline(1, periodic=None, extrapolate=None),
-    _make_random_spline(2, periodic=None, extrapolate=None),
-    _make_random_spline(3, periodic=None, extrapolate=None),
-])
+@pytest.mark.parametrize('ndspline',
+    [_make_random_spline(1, kx,) for kx in range(4) ] + \
+    [_make_random_spline(2, [kx, ky]) for kx in range(1,4) for ky in range(1,4)] + \
+    [_make_random_spline(3, [kx, ky, kz])
+       for kx in range(1,4) for ky in range(1,4) for kz in range(1,4)])
 def test_nd_eval(ndspline):
     query_points = get_query_points(ndspline)
     nus = np.zeros((ndspline.xdim), dtype=np.int)
