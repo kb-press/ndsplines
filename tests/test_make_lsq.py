@@ -3,7 +3,7 @@ import ndsplines
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
-from .utils import (get_query_points, assert_equal_splines, _make_random_spline,
+from utils import (get_query_points, assert_equal_splines, _make_random_spline,
     get_grid_data, un_knot_a_knot)
 
 @pytest.mark.parametrize('ndspline', [

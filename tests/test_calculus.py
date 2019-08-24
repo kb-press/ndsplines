@@ -3,7 +3,7 @@ import ndsplines
 import numpy as np
 from numpy.testing import assert_allclose, assert_equal
 from scipy import interpolate
-from .utils import get_query_points, assert_equal_splines, _make_random_spline
+from utils import get_query_points, assert_equal_splines, _make_random_spline
 
 @pytest.fixture(
     params=[_make_random_spline(1, kx,) for kx in range(4) ] + \
