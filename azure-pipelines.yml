@@ -1,6 +1,32 @@
-trigger:
-- master
+# Azure Pipelines configuration
+#
+# For now we use a single stage and single job (copied for multiple OS/Python
+# version combinations) with steps for installing dependencies, building and
+# installing the ndsplines package, running the tests, and generating a code
+# coverage report.
+#
+# References:
+#   https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema
+#   https://docs.microsoft.com/en-us/azure/devops/pipelines/agents/pools-queues
+#   https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks
 
+# Run the pipeline for commits to master
+trigger:
+  branches:
+    include:
+      - master
+# TODO add a rule for tags/releases (e.g. `tags: include: 'v*'` for v1.0.0 type tags)
+
+# Run the pipeline for PRs against master
+pr:
+  autoCancel: true
+  branches:
+    include:
+      - master
+
+# Omitting stages/jobs hierarchy items because there's only one of each. The
+# matrix strategy generates copies of the job spec below for different
+# combinations of OS/Python version.
 strategy:
   matrix:
     Linux_Py36:
@@ -22,34 +48,39 @@ strategy:
       imageName: 'macOS-10.13'
       python.version: '3.7'
 
+# Grab an agent from the pool by image name specified by the matrix above
 pool:
-  vmImage: $(imageName)
+  vmImage: '$(imageName)'
 
+# Steps to run in each job
 steps:
+
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/tasks/tool/use-python-version
 - task: UsePythonVersion@0
   inputs:
     versionSpec: '$(python.version)'
+    addToPath: true
   displayName: 'Use Python $(python.version)'
 
+# TODO install from requirements-dev.txt?
 - script: |
-    python -m pip install --upgrade pip
-    python -m pip install -r requirements.txt
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pytest pytest-azurepipelines pytest-cov pandas
     pip list
   displayName: 'Install dependencies'
 
+# Install editable so code coverage works
 - script: |
-    python -m pip install pytest pytest-azurepipelines pytest-cov pandas
-    python setup.py build
-    python setup.py install
-  displayName: 'Install Test dependencies'
+    pip install -e .
+  displayName: 'Build and install'
+  failOnStderr: true
 
 - script: |
-    pytest -sv
+    pytest -sv --cov ndsplines
   displayName: 'Test'
-  condition: ne('Job Linux_Py36', variables['Agent.JobName'])
 
 - script: |
-    pytest -sv --cov
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
-  displayName: 'Test With Coverage'
-  condition: eq('Job Linux_Py36', variables['Agent.JobName'])
+  displayName: 'Upload coverage report'
+  condition: eq('Job Linux_Py37', variables['Agent.JobName'])
