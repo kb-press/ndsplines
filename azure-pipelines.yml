@@ -72,7 +72,6 @@ steps:
 
 - script: |
     python setup.py build_ext --inplace
-  failOnStderr: true
   displayName: 'Build extension module'
 
 # Install editable so code coverage works
