@@ -95,6 +95,6 @@ steps:
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts
 - task: PublishPipelineArtifact@1
   inputs:
-    path: 'dist/**'
+    path: '$(System.DefaultWorkingDirectory)/dist/*.whl'
     artifact: '$(Agent.JobName) wheel'
   displayName: 'Publish platform wheel to artifacts'
