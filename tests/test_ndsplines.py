@@ -124,12 +124,12 @@ def test_make_interp_nn():
     _make_random_spline(3, periodic=None, extrapolate=None),
     _make_random_spline(4, periodic=None, extrapolate=None),
 ])
-def test_file_io(ndspline):
+def test_file_io(ndspline, tmp_path):
     """ verify lossless file i/o """
     b = ndspline
-    fname = 'test_file_io.npz'
-    b.to_file(fname, True)
-    assert_equal_splines(b, ndsplines.from_file(fname))
-    b.to_file(fname, False)
-    assert_equal_splines(b, ndsplines.from_file(fname))
+    fpath = tmp_path / 'test_file_io.npz'
+    b.to_file(fpath, True)
+    assert_equal_splines(b, ndsplines.from_file(fpath))
+    b.to_file(fpath, False)
+    assert_equal_splines(b, ndsplines.from_file(fpath))
 
