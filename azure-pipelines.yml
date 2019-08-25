@@ -92,9 +92,15 @@ steps:
     python setup.py bdist_wheel
   displayName: 'Build platform wheel'
 
-# https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts
-- task: PublishPipelineArtifact@1
+- task: CopyFiles@2
   inputs:
-    path: '$(System.DefaultWorkingDirectory)/dist/*.whl'
-    artifact: '$(Agent.JobName) wheel'
-  displayName: 'Publish platform wheel to artifacts'
+    contents: 'dist/**'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+    cleanTargetFolder: true
+  displayName: 'Copy wheel to staging directory'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)/dist'
+    artifactName: '$(Agent.JobName) wheel'
+  displayName: 'Publish wheel artifact'
