@@ -66,15 +66,19 @@ steps:
 - script: |
     pip install --upgrade pip
     pip install -r requirements.txt
-    pip install pytest pytest-azurepipelines pytest-cov pandas
+    pip install pytest pytest-azurepipelines pytest-cov pandas wheel
     pip list
   displayName: 'Install dependencies'
+
+- script: |
+    python setup.py build_ext --inplace
+  failOnStderr: true
+  displayName: 'Build extension module'
 
 # Install editable so code coverage works
 - script: |
     pip install -e .
-  displayName: 'Build and install'
-  failOnStderr: true
+  displayName: 'Install'
 
 - script: |
     pytest -sv --cov ndsplines
@@ -84,3 +88,14 @@ steps:
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Upload coverage report'
   condition: eq('Job Linux_Py37', variables['Agent.JobName'])
+
+- script: |
+    python setup.py bdist_wheel
+  displayname: 'Build platform wheel'
+
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts
+- task: PublishPipelineArtifact@1
+  inputs:
+    path: 'dist/**'
+    artifact: '$(Agent.JobName) wheel'
+  displayName: 'Publish platform wheel to artifacts'
