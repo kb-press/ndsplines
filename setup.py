@@ -39,10 +39,16 @@ else:
 
 setup(
     name=name,
-    version="0.0.5",
+    version="0.0.6rc1",
     description="Multi-dimensional splines",
-    url="https://github.com/sixpearls/ndsplines",
+    url="https://github.com/kb-press/ndsplines",
     author="Benjamin Margolis",
+    classifiers=[
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+    ],
     packages=["ndsplines"],
     ext_modules=extensions,
     license='BSD',
