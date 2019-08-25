@@ -91,7 +91,7 @@ steps:
 
 - script: |
     python setup.py bdist_wheel
-  displayname: 'Build platform wheel'
+  displayName: 'Build platform wheel'
 
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/artifacts/pipeline-artifacts
 - task: PublishPipelineArtifact@1
