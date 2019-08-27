@@ -76,8 +76,9 @@ evaluate it over a denser mesh.
 
 Generally, we construct data so that the first `ndim` axes index the independent 
 variables and the remaining axes index output. This is a generalization of using
-rows to index time and columns to index output variables for We can also create
-an interpolating spline frm a tidy data format:
+rows to index time and columns to index output variables for time-series data. 
+
+We can also create an interpolating spline from a tidy data format:
 
 .. code:: python
 
@@ -90,16 +91,16 @@ an interpolating spline frm a tidy data format:
     print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(tidy_interp.knots, interp.knots)]))
 
 Note however, that the tidy dataset must be over a structured rectangular grid 
-equivalent to the N-dimensional representation. Also note that Pandas dataframes
+equivalent to the N-dimensional tensor product representation. Also note that Pandas dataframes
 can be used, in which case lists of column names can be used instead of lists of
 column indices. 
 
 To see examples for creating least-squares regression splines 
 with ``make_lsq_spline``, see the `1D example`_ and `2D example`_. 
 
-Derivatives of constructed splines can be evaluated in two ways. First by using
-the `nus` parameter while calling the interpolator or by creating a new spline 
-with the ``derivative`` function. In this codeblock, we show both methods of 
+Derivatives of constructed splines can be evaluated in two ways: (1) by using
+the ``nus`` parameter while calling the interpolator or (2) by creating a new spline 
+with the ``derivative`` method. In this codeblock, we show both ways of 
 evaluating derivatives in each direction.
 
 .. code:: python

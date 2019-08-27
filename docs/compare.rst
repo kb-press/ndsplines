@@ -2,10 +2,10 @@
 Comparison
 ==========
 
-In Matlab, these spline interpolations are implemnted in:
+In Matlab, these spline interpolations are implemented in:
     - Spline Toolbox, which also includes regression using splines
     - ``interpn``, ``interp{1|2|3}``, and ``spline`` (an alias for interp1) which 
-      together may be a replacement for the spline toolbox?
+      together may be a replacement for the spline toolbox.
 
  `Spline Toolbox` was written by Carl de Boor, who wrote many seminal articles 
  and books on splines. Many commonly used algorithms for evaluating the basis 
@@ -27,18 +27,16 @@ In Python, SciPy provides:
 
       - There are also class-based wrappers for ``fitpack``'s univariate splines: 
         ``UnivariateSpline``, ``InterpolatedUnivariateSpline``, and 
-        ``LSQUnivariateSpline``
+        ``LSQUnivariateSpline``.
 
       - Functional interface to ``bisplrep`` and ``bisplev``. Note that ``bisplrep``
         can construct a B-spline that interpolates data on an unstructured
         grid.
-        TODO: I believe this functionality can be easily re-produced using the
-        least squares constructor; we should make sure we can do this.
 
       - Class-based interfaces for ``fitpack``'s bivariate splines, 
         ``RectBivariateSpline``, ``RectSphereBivariateSpline``, 
         ``SmoothBivariateSpline``, ``SmoothSphereBivariateSpline``, 
-        ``LSQBivariateSpline``, ``LSQSphereBivariateSpline``
+        ``LSQBivariateSpline``, ``LSQSphereBivariateSpline``.
 
       - An interface to ``fitpack``'s bivariate splines is also provided in 
         ``interp2d``.
