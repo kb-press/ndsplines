@@ -2,17 +2,6 @@
 Comparison
 ==========
 
-In Matlab, these spline interpolations are implemented in:
-    - Spline Toolbox, which also includes regression using splines
-    - ``interpn``, ``interp{1|2|3}``, and ``spline`` (an alias for interp1) which 
-      together may be a replacement for the spline toolbox.
-
- `Spline Toolbox` was written by Carl de Boor, who wrote many seminal articles 
- and books on splines. Many commonly used algorithms for evaluating the basis 
- functions and computing the coefficients and knots from data were developed 
- by de Boor.
-
-
 In Python, SciPy provides:
 
     - A number of wrappers around the fortran ``fitpack`` library by P. Dierckx:
@@ -63,3 +52,13 @@ In Python, SciPy provides:
       in each dimension is uniform.
 
 There are also other interpolation methods using other basis functions.
+
+In Matlab, these spline interpolations are implemented in:
+    - Spline Toolbox, which also includes regression using splines
+    - ``interpn``, ``interp{1|2|3}``, and ``spline`` (an alias for interp1) which 
+      together may be a replacement for the spline toolbox.
+
+ `Spline Toolbox` was written by Carl de Boor, who wrote many seminal articles 
+ and books on splines. Many commonly used algorithms for evaluating the basis 
+ functions and computing the coefficients and knots from data were developed 
+ by de Boor.
