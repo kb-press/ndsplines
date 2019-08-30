@@ -104,7 +104,7 @@ steps:
 # https://iscinumpy.gitlab.io/post/azure-devops-python-wheels/
 - script: |
     docker run --rm -w /io -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/build_wheel.sh
-  condition: eq('Job Linux_Py37', variables['Agent.JobName']))
+  condition: eq('Job Linux_Py37', variables['Agent.JobName'])
   displayName: 'Build Linux platform wheels in Docker'
 
 - task: CopyFiles@2
