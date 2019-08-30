@@ -88,19 +88,34 @@ steps:
   displayName: 'Upload coverage report'
   condition: eq('Job Linux_Py37', variables['Agent.JobName'])
 
+# Only need one sdist and it shouldn't matter which platform
+- script: |
+    python setup.py sdist
+  condition: eq('Job Linux_Py37', variables['Agent.JobName'])
+  displayName: 'Build source distribution'
+
+# Build a wheel -- for Win/Mac, we can just go for it
 - script: |
     python setup.py bdist_wheel
+  condition: not(contains(variables['Agent.JobName'], 'Linux'))
   displayName: 'Build platform wheel'
+
+# For Linux, we need to build a "manylinux" wheel
+# https://iscinumpy.gitlab.io/post/azure-devops-python-wheels/
+- script: |
+    docker run --rm -w /io -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/build_wheel.sh
+  condition: eq('Job Linux_Py37', variables['Agent.JobName']))
+  displayName: 'Build Linux platform wheels in Docker'
 
 - task: CopyFiles@2
   inputs:
     contents: 'dist/**'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
     cleanTargetFolder: true
-  displayName: 'Copy wheel to staging directory'
+  displayName: 'Copy dist contents to staging directory'
 
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '$(Build.ArtifactStagingDirectory)/dist'
     artifactName: '$(Agent.JobName) wheel'
-  displayName: 'Publish wheel artifact'
+  displayName: 'Publish artifacts'
