@@ -88,10 +88,11 @@ steps:
   displayName: 'Upload coverage report'
   condition: eq('Job Linux_Py37', variables['Agent.JobName'])
 
-# Only need one sdist and it shouldn't matter which platform
+# Only need one sdist and it shouldn't matter which platform. We'll use Linux
+# with Python 3.6 so it has something to publish
 - script: |
     python setup.py sdist
-  condition: eq('Job Linux_Py37', variables['Agent.JobName'])
+  condition: eq('Job Linux_Py36', variables['Agent.JobName'])
   displayName: 'Build source distribution'
 
 # Build a wheel -- for Win/Mac, we can just go for it
