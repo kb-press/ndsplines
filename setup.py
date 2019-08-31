@@ -56,7 +56,7 @@ setup(
     description="Multi-dimensional splines",
     url="https://github.com/kb-press/ndsplines",
     author="Benjamin Margolis",
-    author_email="ben@sixpearls.com"
+    author_email="ben@sixpearls.com",
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',
