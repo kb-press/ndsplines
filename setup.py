@@ -37,9 +37,22 @@ elif use_numpy:
 else:
     extensions = []
 
+__version__ = "0.0.6rc1"
+
+here = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+    long_description = f.read()
+
+long_description = long_description.replace(
+    "https://ndsplines.readthedocs.io/en/latest/",
+    "https://ndsplines.readthedocs.io/en/v{}/".format(
+        '.'.join(__version__.split('.')[:3])
+    )
+)
+
 setup(
     name=name,
-    version="0.0.6rc1",
+    version=__version__,
     description="Multi-dimensional splines",
     url="https://github.com/kb-press/ndsplines",
     author="Benjamin Margolis",
@@ -51,6 +64,7 @@ setup(
     ],
     packages=["ndsplines"],
     ext_modules=extensions,
+    long_description=long_description,
     license='BSD',
     setup_requires=['numpy'],
     install_requires=['numpy', 'scipy'],

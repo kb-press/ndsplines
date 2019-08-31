@@ -2,6 +2,10 @@
 ndsplines
 =========
 
+.. image:: https://img.shields.io/pypi/v/ndsplines.svg
+    :alt: PyPI Package latest release
+    :target: https://pypi.python.org/pypi/ndsplines
+
 .. image:: https://dev.azure.com/kb-press/ndsplines/_apis/build/status/kb-press.ndsplines?branchName=master
     :target: https://dev.azure.com/kb-press/ndsplines/_build/latest?definitionId=1&branchName=master
     :alt: Azure Pipelines build status
@@ -16,11 +20,11 @@ ndsplines
 
 This is a Python package for multivariate B-splines with performant NumPy and C
 (via Cython) implementations. For a mathematical overview of tensor product 
-B-splines, see the Splines_ page of the documentation.
+B-splines, see the |Splines| page of the documentation.
 
 The primary goal of this package is to provide a unified API for tensor product 
 splines of arbitrary input and output dimension. For a list of related packages 
-see the Comparisons_ page.
+see the |Comparisons| page.
 
 Installation
 ------------
@@ -41,7 +45,10 @@ implementation, install with the ``build_ext`` feature (i.e., ``$ pip install
 .[build_ext]``) or install Cython (i.e., ``$ pip install cython``) before 
 installing ``ndsplines``.
 
+.. |Splines| replace:: `Splines`_
 .. _Splines: https://ndsplines.readthedocs.io/en/latest/math.html
+
+.. |Comparisons| replace:: `Comparisons`_
 .. _Comparisons: https://ndsplines.readthedocs.io/en/latest/compare.html
 
 Usage
@@ -113,7 +120,7 @@ Pandas dataframes can be used, in which case lists of column names can be used
 instead of lists of column indices. 
 
 To see examples for creating least-squares regression splines 
-with ``make_lsq_spline``, see the `1D example`_ and `2D example`_. 
+with ``make_lsq_spline``, see the |1D example| and |2D example|. 
 
 Derivatives of constructed splines can be evaluated in two ways: (1) by using
 the ``nus`` parameter while calling the interpolator or (2) by creating a new spline 
@@ -153,7 +160,11 @@ spline representative of the anti-derivative in the specified direction.
           np.all([np.all(k0 == k1) for k0, k1 in zip(interp2.knots, interp.knots)]))
 
 .. _tidy data: https://www.jstatsoft.org/article/view/v059i10
+
+.. |1D example| replace:: `1D example`_
 .. _1D example: https://ndsplines.readthedocs.io/en/latest/auto_examples/1d-lsq.html
+
+.. |2D example| replace:: `2D example`_
 .. _2D example: https://ndsplines.readthedocs.io/en/latest/auto_examples/2d-lsq.html
 
 
