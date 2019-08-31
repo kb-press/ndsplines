@@ -16,7 +16,8 @@ trigger:
   branches:
     include:
       - master
-# TODO add a rule for tags/releases (e.g. `tags: include: 'v*'` for v1.0.0 type tags)
+  tags:
+    include: '*'
 
 # Run the pipeline for PRs against master
 pr:
@@ -93,20 +94,32 @@ steps:
 # with Python 3.6 so it has something to publish
 - script: |
     python setup.py sdist
-  condition: eq('Job Linux_Py36', variables['Agent.JobName'])
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      eq('Job Linux_Py36', variables['Agent.JobName'])
+    )
   displayName: 'Build source distribution'
 
 # Build a wheel -- for Win/Mac, we can just go for it
 - script: |
     python setup.py bdist_wheel
-  condition: not(contains(variables['Agent.JobName'], 'Linux'))
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      not(contains(variables['Agent.JobName'], 'Linux'))
+    )
   displayName: 'Build platform wheel'
 
 # For Linux, we need to build a "manylinux" wheel
 # https://iscinumpy.gitlab.io/post/azure-devops-python-wheels/
 - script: |
     docker run --rm -w /io -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/build_wheel.sh
-  condition: eq('Job Linux_Py37', variables['Agent.JobName'])
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      eq('Job Linux_Py37', variables['Agent.JobName'])
+    )
   displayName: 'Build Linux platform wheels in Docker'
 
 - task: CopyFiles@2
@@ -114,10 +127,12 @@ steps:
     contents: 'dist/**'
     targetFolder: '$(Build.ArtifactStagingDirectory)'
     cleanTargetFolder: true
+  condition: contains(variables['Build.SourceBranch'], 'tags')
   displayName: 'Copy dist contents to staging directory'
 
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '$(Build.ArtifactStagingDirectory)/dist'
     artifactName: '$(Agent.JobName) '
+  condition: contains(variables['Build.SourceBranch'], 'tags')
   displayName: 'Publish artifacts'
