@@ -10,7 +10,7 @@ A general :math:`N` dimensional tensor product B-spline is given by
 
 where :math:`B_{i_j;k_j,t_j}` is the :math:`i_j`-th B-spline basis function of 
 degree :math:`k_j` over the knots :math:`{t_j}` for the :math:`j`-th dimension.
-Univariate and bivariate splines are special cases of the general form. The 
+Univariate and bivariate splines are special cases of this general form. The 
 usual form for a univariate B-spline is
 
 .. math::
@@ -43,14 +43,14 @@ For an :math:`N`-dimensional tensor-product B-spline, each dimension can have
 its own order.
 
 
-Notes on Implementation
------------------------
+Compact Support
+---------------
 
 A key feature of the B-splines is that for :math:`n+k+1` knots, there are
 :math:`n` basis functions, but only :math:`k+1` are non-zero on any 
-particular panel (domain between knots). So to interpolate a large data set
+particular span between knots. So to interpolate a large data set
 requires only evaluating the linear combination of :math:`k+1` elements (for
-each dimension). So, for example, a 1-dimensional interpolant can be 
+each dimension). For example, a 1-dimensional interpolant can be 
 evaluated as
 
 .. math::
@@ -60,8 +60,12 @@ evaluated as
 where :math:`B_{i;k,t}` is the :math:`i` -th basis function,  :math:`c_i` is
 the :math:`i` -th coefficient, and :math:`\ell` is the first index with a 
 non-zero basis function at :math:`x`. The sum could easily run over all
-:math:`n` elements, but most summands are zero. This allows the the evaluation
-to be computed very efficiently.
+:math:`n` elements, but most summands are zero. The evaluation
+to be computed very efficiently by performing the minimal number of floating-point
+operations.
+
+Basis definition
+----------------
 
 Each basis function is defined by a recursive relationship in the order of the 
 B-spline. The 0-th degree B-spline has the form

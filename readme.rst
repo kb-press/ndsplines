@@ -36,7 +36,7 @@ Usage
 -----
 
 The easiest way to use ``ndsplines`` is to use one of the ``make_*`` 
-functions, ``make_interp_spline``, ``make_interp_spline_from_tidy``, or 
+functions: ``make_interp_spline``, ``make_interp_spline_from_tidy``, or 
 ``make_lsq_spline``, which return an ``NDSpline`` object which can be used to
 evaluate the spline. For example, suppose we have data over a two-dimensional
 mesh.
@@ -66,40 +66,46 @@ evaluate it over a denser mesh.
 
     # generate denser grid of independent variables to interpolate
     sparse_dense = 2**7
-    xx = np.concatenate([np.linspace(x[i], x[i+1], sparse_dense) for i in range(x.size-1)]) # np.linspace(x[0], x[-1], x.size*sparse_dense)
-    yy = np.concatenate([np.linspace(y[i], y[i+1], sparse_dense) for i in range(y.size-1)]) # np.linspace(y[0], y[-1], y.size*sparse_dense)
+    xx = np.concatenate([np.linspace(x[i], x[i+1], sparse_dense) for i in range(x.size-1)])
+    yy = np.concatenate([np.linspace(y[i], y[i+1], sparse_dense) for i in range(y.size-1)])
     gridxxyy = np.stack(np.meshgrid(xx, yy, indexing='ij'), axis=-1)
 
     # evaluate spline over denser grid
     meshff = interp(gridxxyy)
 
 
-Generally, we construct data so that the first `ndim` axes index the independent 
-variables and the remaining axes index output. This is a generalization of using
-rows to index time and columns to index output variables for We can also create
-an interpolating spline frm a tidy data format:
+Generally, we construct data so that the first ``ndim`` axes index the
+independent variables and the remaining axes index output. This is
+a generalization of using rows to index time and columns to index output
+variables for time-series data. 
+
+We can also create an interpolating spline from a `tidy data`_ format:
 
 .. code:: python
 
     tidy_data = np.dstack((gridxy, meshf)).reshape((-1,3))
-    tidy_interp = ndsplines.make_interp_spline_from_tidy(tidy_data, 
-      [0,1], # columns to use as independent variable data
-      [2]) # columns to use as dependent variable data
+    tidy_interp = ndsplines.make_interp_spline_from_tidy(
+        tidy_data,
+        [0,1], # columns to use as independent variable data
+        [2]    # columns to use as dependent variable data
+    )
 
-    print("\nCoefficients all same?", np.all(tidy_interp.coefficients == interp.coefficients))
-    print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(tidy_interp.knots, interp.knots)]))
+    print("\nCoefficients all same?",
+          np.all(tidy_interp.coefficients == interp.coefficients))
+    print("Knots all same?",
+          np.all([np.all(k0 == k1) for k0, k1 in zip(tidy_interp.knots, interp.knots)]))
 
-Note however, that the tidy dataset must be over a structured rectangular grid 
-equivalent to the N-dimensional representation. Also note that Pandas dataframes
-can be used, in which case lists of column names can be used instead of lists of
-column indices. 
+Note however, that the tidy dataset must be over a structured rectangular grid
+equivalent to the N-dimensional tensor product representation. Also note that
+Pandas dataframes can be used, in which case lists of column names can be used
+instead of lists of column indices. 
 
 To see examples for creating least-squares regression splines 
 with ``make_lsq_spline``, see the `1D example`_ and `2D example`_. 
 
-Derivatives of constructed splines can be evaluated in two ways. First by using
-the `nus` parameter while calling the interpolator or by creating a new spline 
-with the ``derivative`` function. In this codeblock, we show both methods of 
+Derivatives of constructed splines can be evaluated in two ways: (1) by using
+the ``nus`` parameter while calling the interpolator or (2) by creating a new spline 
+with the ``derivative`` method. In this codeblock, we show both ways of 
 evaluating derivatives in each direction.
 
 .. code:: python
@@ -122,16 +128,20 @@ spline representative of the anti-derivative in the specified direction.
     # Calculus demonstration
     interp1 = deriv_interp.antiderivative(0)
     coeff_diff = interp1.coefficients - interp.coefficients
-    print("\nAntiderivative of derivative:\n","Coefficients differ by constant?", np.allclose(interp1.coefficients+2.0, interp.coefficients))
-    print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(interp1.knots, interp.knots)]))
+    print("\nAntiderivative of derivative:\n","Coefficients differ by constant?",
+          np.allclose(interp1.coefficients+2.0, interp.coefficients))
+    print("Knots all same?",
+          np.all([np.all(k0 == k1) for k0, k1 in zip(interp1.knots, interp.knots)]))
 
     antideriv_interp = interp.antiderivative(0)
     interp2 = antideriv_interp.derivative(0)
-    print("\nDerivative of antiderivative:\n","Coefficients the same?", np.allclose(interp2.coefficients, interp.coefficients))
-    print("Knots all same?", np.all([np.all(knot0 == knot1) for knot0, knot1 in zip(interp2.knots, interp.knots)]))
+    print("\nDerivative of antiderivative:\n","Coefficients the same?",
+          np.allclose(interp2.coefficients, interp.coefficients))
+    print("Knots all same?",
+          np.all([np.all(k0 == k1) for k0, k1 in zip(interp2.knots, interp.knots)]))
 
-
-.. _1D example : https://ndsplines.readthedocs.io/en/latest/auto_examples/1d-lsq.html
+.. _tidy data: https://www.jstatsoft.org/article/view/v059i10
+.. _1D example: https://ndsplines.readthedocs.io/en/latest/auto_examples/1d-lsq.html
 .. _2D example: https://ndsplines.readthedocs.io/en/latest/auto_examples/2d-lsq.html
 
 
@@ -171,4 +181,3 @@ the developer requirements above)::
     $ pip install -e .[docs]
     $ cd docs
     $ make html
-

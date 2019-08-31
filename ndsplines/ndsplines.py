@@ -22,17 +22,35 @@ class NDSpline(object):
         S(x_1, ..., x_N) = \sum_{i_1=0}^{n_1-1}  \cdots \sum_{i_N=0}^{n_N-1} c_{i_1, ..., i_N} \prod_{j = i}^{N} B_{i_j;k_j,t_j}(x_j)
 
     where :math:`B_{i_j;k_j,t_j}` is the :math:`i_j`-th B-spline basis function
-    of degree :math:`k_j` over the knots :math:`{t_j}`.
+    of degree :math:`k_j` over the knots :math:`{t_j}` with coefficients
+    :math:`c_{i_1, ..., i_N}`
 
     Parameters
     ----------
-    knots : list of ndarrays,
-        shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
-    coefficients : ndarray, 
-        shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=np.float_
+    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
+        List of knots in each dimension, :math:`[t_1, t_2, \ldots, t_N]`.
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=np.float_
+        N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
     degrees : ndarray, shape=(xdim,), dtype=np.int_
+        Array of the degree of each dimension, :math:`[k_1, k_2, \ldots, k_N]`.
     periodic : ndarray, shape=(xdim,), dtype=np.bool_
+        Array of periodicity flags for each dimension.
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
+        Array of extrapolation flags for each side in each dimension.
+
+    Attributes
+    ----------
+    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
+        List of knots in each dimension, :math:`[t_1, t_2, \ldots, t_N]`.
+    xdim : int
+        Dimension of spline input space.
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=np.float_
+        N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
+    ydim : int
+        Dimension of spline output space.
+    yshape : tuple of ints
+        Shape of spline output.
+
     """
 
     def __init__(self, knots, coefficients, degrees, periodic=False, extrapolate=True):
@@ -95,6 +113,10 @@ class NDSpline(object):
         ----------
         num_points : int
             Number of evaluation points to allocate for.
+
+        See Also
+        --------
+        NDSpline.__call__, NDSpline.allocate_workspace_arrays
         """
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
@@ -119,6 +141,10 @@ class NDSpline(object):
         nus : int or ndarray, shape=(self.xdim,) dtype=np.int_
             Order of derivatives for each dimension to evaluate. Optional, 
             default is 0.
+
+        See Also
+        --------
+        NDSpline.__call__, NDSpline.allocate_workspace_arrays
         """
         num_points = x.shape[0]
 
@@ -218,6 +244,10 @@ class NDSpline(object):
         -------
         b : NDSpline object
             A new instance representing the derivative.
+
+        See Also
+        --------
+        NDSpline.antiderivative
         """
         if nu < 0:
             return self.antiderivative(dim, nu=-nu)
@@ -266,15 +296,19 @@ class NDSpline(object):
         Parameters
         ----------
         dim : int
-            Dimension in which to take the derivative. 0-indexed, so 
+            Dimension in which to take the antiderivative. 0-indexed, so 
             must be  >= 0 and < self.xdim.
         nu : int, optional
-            Derivative order. Default is 1.
+            Antiderivative order. Default is 1.
 
         Returns
         -------
         b : NDSpline object
             A new instance representing the antiderivative.
+
+        See Also
+        --------
+        NDSpline.derivative
         """
         if nu < 0:
             return self.derivative(dim, nu=-nu)
@@ -304,8 +338,8 @@ class NDSpline(object):
 
     def to_file(self, file, compress=True):
         """
-        Save attributes of `NDSpline` to a binary file in NumPy 
-        ``.npz`` format.
+        Save attributes of ``NDSpline`` object to binary file in NumPy ``.npz`` 
+        format so that the object can be re-created.
 
         Parameters
         ----------
@@ -315,12 +349,17 @@ class NDSpline(object):
             extension will be appended to the file name if it does not already
             have one.
         compress : bool, optional
-            Whether to compress the archive of attributes.
+            Whether to compress the archive of attributes.  Optional, 
+            default is True.
 
         Notes
         -----
         Saves knots in order with name "knots_%d" where %d is the dimension
         of the input space.
+
+        See Also
+        --------
+        from_file
 
         """
         to_save_dict = {}
@@ -355,7 +394,7 @@ class NDSpline(object):
 
     def __eq__(self, other):
         """
-        Determine equality with another spline.
+        Check equality with another spline.
 
         Parameters
         ----------
@@ -393,6 +432,9 @@ def from_file(file):
     Assumes knots are saved in order with names "knots_%d" where %d is 
     the dimension of the input space.
 
+    See Also
+    --------
+    NDSpline.to_file
     """
     with np.load(file) as data:
         coefficients = data['coefficients']
@@ -424,6 +466,10 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
     -------
     b : NDSpline object
         A least-squares `NDSpline`.
+
+    See Also
+    --------
+    make_interp_spline, make_interp_spline_from_tidy
 
     """
     if x.ndim == 1:
@@ -498,8 +544,7 @@ def make_interp_spline(x, y, degrees=3):
 
     Parameters
     ----------
-    x : array_like broadcastable to (n_0, n_1, ..., n_(xdim-1), xdim) or 
-        arguments to np.meshgrid to construct same.
+    x : array_like broadcastable to (n_0, n_1, ..., n_(xdim-1), xdim) or arguments to ``numpy.meshgrid`` to construct same.
         Abscissas.
     y : array_like, shape (n_0, n_1, ..., n_(xdim-1),) + yshape
         Ordinates.
@@ -511,6 +556,10 @@ def make_interp_spline(x, y, degrees=3):
     -------
     b : NDSpline object
         An interpolating `NDSpline`.
+
+    See Also
+    --------
+    make_lsq_spline, make_interp_spline_from_tidy
 
     """
     if isinstance(x, np.ndarray):  # mesh
@@ -724,9 +773,10 @@ else:
 def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, degrees=3):
     """
     Construct an interpolating B-spline from a tidy data source. The tidy data
-    source should be a complete matrix (see the tidy_data parameter description).
-    The order of the input_vars and output_vars will be the same as the 
-    constructed interpolant.
+    source should be a complete matrix (see the ``tidy_data`` parameter 
+    description). The order of the input and output dimension of the constructed
+    interpolant will be the same as the ``input_vars`` and ``output_vars``
+    arguments, following the convention of input variables first.
 
     Parameters
     ----------
@@ -749,6 +799,10 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, degrees=3):
     -------
     b : NDSpline object
         An interpolating `NDSpline`.
+
+    See Also
+    --------
+    make_lsq_spline, make_interp_spline
     """
 
     if check_pandas and isinstance(tidy_data, pd.DataFrame):
