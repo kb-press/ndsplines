@@ -1,4 +1,5 @@
 from .ndsplines import *
+from .version import __version__
 
 evaluate_spline = None
 

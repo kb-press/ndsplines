@@ -37,7 +37,7 @@ elif use_numpy:
 else:
     extensions = []
 
-__version__ = "0.0.6rc1"
+exec(open('ndsplines/version.py').read())
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
@@ -56,6 +56,7 @@ setup(
     description="Multi-dimensional splines",
     url="https://github.com/kb-press/ndsplines",
     author="Benjamin Margolis",
+    author_email="ben@sixpearls.com"
     classifiers=[
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python :: 3',

@@ -21,7 +21,8 @@ copyright = '2019, Benjamin Margolis'
 author = 'Benjamin Margolis'
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.1'
+release = ndsplines.__version__
+version = ndsplines.__version__
 
 
 # -- General configuration ---------------------------------------------------
