@@ -3,7 +3,8 @@
 # For now we use a single stage and single job (copied for multiple OS/Python
 # version combinations) with steps for installing dependencies, building and
 # installing the ndsplines package, running the tests, and generating a code
-# coverage report.
+# coverage report. A source distribution and wheels for each platform are also
+# built and published as artifacts.
 #
 # References:
 #   https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema
@@ -15,7 +16,9 @@ trigger:
   branches:
     include:
       - master
-# TODO add a rule for tags/releases (e.g. `tags: include: 'v*'` for v1.0.0 type tags)
+  tags:
+    include:
+      - '*'
 
 # Run the pipeline for PRs against master
 pr:
@@ -66,15 +69,18 @@ steps:
 - script: |
     pip install --upgrade pip
     pip install -r requirements.txt
-    pip install pytest pytest-azurepipelines pytest-cov pandas
+    pip install pytest pytest-azurepipelines pytest-cov pandas wheel
     pip list
   displayName: 'Install dependencies'
+
+- script: |
+    python setup.py build_ext --inplace
+  displayName: 'Build extension module'
 
 # Install editable so code coverage works
 - script: |
     pip install -e .
-  displayName: 'Build and install'
-  failOnStderr: true
+  displayName: 'Install'
 
 - script: |
     pytest -sv --cov ndsplines
@@ -84,3 +90,50 @@ steps:
     bash <(curl -s https://codecov.io/bash) -t $(CODECOV_TOKEN)
   displayName: 'Upload coverage report'
   condition: eq('Job Linux_Py37', variables['Agent.JobName'])
+
+# Only need one sdist and it shouldn't matter which platform. We'll use Linux
+# with Python 3.6 so it has something to publish
+- script: |
+    python setup.py sdist
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      eq('Job Linux_Py36', variables['Agent.JobName'])
+    )
+  displayName: 'Build source distribution'
+
+# Build a wheel -- for Win/Mac, we can just go for it
+- script: |
+    python setup.py bdist_wheel
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      not(contains(variables['Agent.JobName'], 'Linux'))
+    )
+  displayName: 'Build platform wheel'
+
+# For Linux, we need to build a "manylinux" wheel
+# https://iscinumpy.gitlab.io/post/azure-devops-python-wheels/
+- script: |
+    docker run --rm -w /io -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/build_wheel.sh
+  condition: |
+    and(
+      contains(variables['Build.SourceBranch'], 'tags'),
+      eq('Job Linux_Py37', variables['Agent.JobName'])
+    )
+  displayName: 'Build Linux platform wheels in Docker'
+
+- task: CopyFiles@2
+  inputs:
+    contents: 'dist/**'
+    targetFolder: '$(Build.ArtifactStagingDirectory)'
+    cleanTargetFolder: true
+  condition: contains(variables['Build.SourceBranch'], 'tags')
+  displayName: 'Copy dist contents to staging directory'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: '$(Build.ArtifactStagingDirectory)/dist'
+    artifactName: '$(Agent.JobName) '
+  condition: contains(variables['Build.SourceBranch'], 'tags')
+  displayName: 'Publish artifacts'
