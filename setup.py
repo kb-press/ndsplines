@@ -40,7 +40,7 @@ else:
 exec(open('ndsplines/version.py').read())
 
 here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
+with open(os.path.join(here, 'readme.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 long_description = long_description.replace(
