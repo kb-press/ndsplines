@@ -3,7 +3,8 @@
 # For now we use a single stage and single job (copied for multiple OS/Python
 # version combinations) with steps for installing dependencies, building and
 # installing the ndsplines package, running the tests, and generating a code
-# coverage report.
+# coverage report. A source distribution and wheels for each platform are also
+# built and published as artifacts.
 #
 # References:
 #   https://docs.microsoft.com/en-us/azure/devops/pipelines/yaml-schema
@@ -118,5 +119,5 @@ steps:
 - task: PublishBuildArtifacts@1
   inputs:
     pathToPublish: '$(Build.ArtifactStagingDirectory)/dist'
-    artifactName: '$(Agent.JobName) wheel'
+    artifactName: '$(Agent.JobName) '
   displayName: 'Publish artifacts'
