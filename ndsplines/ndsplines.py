@@ -37,6 +37,20 @@ class NDSpline(object):
         Array of periodicity flags for each dimension.
     extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
         Array of extrapolation flags for each side in each dimension.
+
+    Attributes
+    ----------
+    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
+        List of knots in each dimension, :math:`[t_1, t_2, \ldots, t_N]`.
+    xdim : int
+        Dimension of spline input space.
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=np.float_
+        N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
+    ydim : int
+        Dimension of spline output space.
+    yshape : tuple of ints
+        Shape of spline output.
+
     """
 
     def __init__(self, knots, coefficients, degrees, periodic=False, extrapolate=True):
@@ -99,6 +113,10 @@ class NDSpline(object):
         ----------
         num_points : int
             Number of evaluation points to allocate for.
+
+        See Also
+        --------
+        NDSpline.__call__, NDSpline.allocate_workspace_arrays
         """
         if self.current_max_num_points < num_points:
             self.current_max_num_points = num_points
@@ -126,7 +144,7 @@ class NDSpline(object):
 
         See Also
         --------
-        NDSpline.__call__
+        NDSpline.__call__, NDSpline.allocate_workspace_arrays
         """
         num_points = x.shape[0]
 
