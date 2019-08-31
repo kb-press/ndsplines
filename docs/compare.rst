@@ -2,7 +2,10 @@
 Comparison
 ==========
 
-In Python, SciPy provides:
+Here are some notes on spline functionality provided by other software.
+
+In Python, SciPy's `interpolate
+<https://docs.scipy.org/doc/scipy/reference/interpolate.html>`_ module provides:
 
     - A number of wrappers around the fortran ``fitpack`` library by P. Dierckx:
 
