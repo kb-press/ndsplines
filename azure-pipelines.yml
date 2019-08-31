@@ -17,7 +17,8 @@ trigger:
     include:
       - master
   tags:
-    include: '*'
+    include:
+      - *
 
 # Run the pipeline for PRs against master
 pr:
