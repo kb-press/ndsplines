@@ -2,6 +2,18 @@
 ndsplines
 =========
 
+.. image:: https://dev.azure.com/kb-press/ndsplines/_apis/build/status/kb-press.ndsplines?branchName=master
+    :target: https://dev.azure.com/kb-press/ndsplines/_build/latest?definitionId=1&branchName=master
+    :alt: Azure Pipelines build status
+
+.. image:: https://readthedocs.org/projects/ndsplines/badge/?version=latest
+    :target: https://ndsplines.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation status
+
+.. image:: https://codecov.io/gh/kb-press/ndsplines/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/kb-press/ndsplines
+    :alt: Codecov test coverage
+
 This is a Python package for multivariate B-splines with performant NumPy and C
 (via Cython) implementations. For a mathematical overview of tensor product 
 B-splines, see the Splines_ page of the documentation.

@@ -276,7 +276,8 @@ class NDSpline(object):
                     # Compute the new coefficients
                     c_left_selector[dim] = slice(1,None)
                     c_right_selector[dim] = slice(0,-1)
-                    coefficients = (coefficients[c_left_selector] - coefficients[c_right_selector]) * k / dt
+                    coefficients = (coefficients[tuple(c_left_selector)] -
+                                    coefficients[tuple(c_right_selector)]) * k / dt
                     # Adjust knots
                     t = t[1:-1]
                     k -= 1
