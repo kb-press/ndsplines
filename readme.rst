@@ -18,6 +18,11 @@ ndsplines
     :target: https://codecov.io/gh/kb-press/ndsplines
     :alt: Codecov test coverage
 
+.. image:: https://zenodo.org/badge/172368121.svg
+    :target: https://zenodo.org/badge/latestdoi/172368121
+    :alt: zenodo DOI
+
+
 This is a Python package for multivariate B-splines with performant NumPy and C
 (via Cython) implementations. For a mathematical overview of tensor product 
 B-splines, see the |Splines| page of the documentation.
