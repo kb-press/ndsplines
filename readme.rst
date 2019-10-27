@@ -6,21 +6,26 @@ ndsplines
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/ndsplines
 
-.. image:: https://dev.azure.com/kb-press/ndsplines/_apis/build/status/kb-press.ndsplines?branchName=master
-    :target: https://dev.azure.com/kb-press/ndsplines/_build/latest?definitionId=1&branchName=master
-    :alt: Azure Pipelines build status
-
 .. image:: https://readthedocs.org/projects/ndsplines/badge/?version=latest
     :target: https://ndsplines.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation status
+
+.. image:: https://joss.theoj.org/papers/10.21105/joss.01745/status.svg
+    :target: https://doi.org/10.21105/joss.01745
+    :alt: JOSS DOI
+
+.. image:: https://zenodo.org/badge/172368121.svg
+    :target: https://zenodo.org/badge/latestdoi/172368121
+    :alt: Zenodo DOI
+
+.. image:: https://dev.azure.com/kb-press/ndsplines/_apis/build/status/kb-press.ndsplines?branchName=master
+    :target: https://dev.azure.com/kb-press/ndsplines/_build/latest?definitionId=1&branchName=master
+    :alt: Azure Pipelines build status
 
 .. image:: https://codecov.io/gh/kb-press/ndsplines/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/kb-press/ndsplines
     :alt: Codecov test coverage
 
-.. image:: https://zenodo.org/badge/172368121.svg
-    :target: https://zenodo.org/badge/latestdoi/172368121
-    :alt: zenodo DOI
 
 
 This is a Python package for multivariate B-splines with performant NumPy and C
