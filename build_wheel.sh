@@ -8,11 +8,9 @@
 
 set -e -x
 
-pyvers=(36 37 38)
 platform="manylinux2010_x86_64"
 
-for pyver in ${pyvers[@]}; do
-    pybin="/opt/python/cp${pyver}-cp${pyver}m/bin"
+for pybin in /opt/python/cp3*/bin; do
     $pybin/pip install -r requirements.txt
     $pybin/python setup.py bdist_wheel
 done
