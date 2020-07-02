@@ -1,6 +1,7 @@
 -r requirements.txt
+pandas
 matplotlib
 sphinx
 sphinx_gallery
 pytest
-cython
+wheel
