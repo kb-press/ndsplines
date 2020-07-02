@@ -1,6 +1,5 @@
 import numpy as np
 import operator
-from scipy._lib.six import string_types
 from scipy.linalg import get_lapack_funcs, LinAlgError
 from scipy.interpolate._bsplines import (prod, _as_float_array,
                                          _bspl as _sci_bspl)
