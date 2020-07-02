@@ -8,7 +8,7 @@
 
 set -e -x
 
-pyvers=(36 37)
+pyvers=(36 37 38)
 platform="manylinux2010_x86_64"
 
 for pyver in ${pyvers[@]}; do
