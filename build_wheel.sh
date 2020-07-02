@@ -10,7 +10,7 @@ set -e -x
 
 platform="manylinux2010_x86_64"
 
-for pybin in /opt/python/cp3*/bin; do
+for pybin in /opt/python/cp3[678]*/bin; do
     $pybin/pip install -r requirements.txt
     $pybin/python setup.py bdist_wheel
 done
