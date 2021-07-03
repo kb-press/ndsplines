@@ -84,7 +84,7 @@ def test_2d_eval(ndspline):
        for kx in range(1,4) for ky in range(1,4) for kz in range(1,4)])
 def test_nd_eval(ndspline):
     query_points = get_query_points(ndspline)
-    nus = np.zeros((ndspline.xdim), dtype=np.int)
+    nus = np.zeros((ndspline.xdim), dtype=int)
     ndsplines.set_impl('cython')
     cy_res = ndspline(query_points)
     ndsplines.set_impl('numpy')

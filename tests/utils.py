@@ -28,9 +28,9 @@ def _make_random_spline(xdim=1, k=None, periodic=False, extrapolate=True, yshape
     else:
         ks = np.broadcast_to(k, (xdim,))
     if periodic is None:
-        periodic = np.random.randint(2,size=xdim, dtype=np.bool_)
+        periodic = np.random.randint(2,size=xdim, dtype=bool)
     if extrapolate is None:
-        extrapolate = np.random.randint(2,size=xdim, dtype=np.bool_)
+        extrapolate = np.random.randint(2,size=xdim, dtype=bool)
 
     if ydim is None:
         ydim = np.random.randint(5)

@@ -32,9 +32,9 @@ class NDSpline(object):
         N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
     degrees : ndarray, shape=(xdim,), dtype=np.int_
         Array of the degree of each dimension, :math:`[k_1, k_2, \ldots, k_N]`.
-    periodic : ndarray, shape=(xdim,), dtype=np.bool_
+    periodic : ndarray, shape=(xdim,), dtype=bool
         Array of periodicity flags for each dimension.
-    extrapolate : ndarray, shape=(xdim,2), dtype=np.bool_
+    extrapolate : ndarray, shape=(xdim,2), dtype=bool
         Array of extrapolation flags for each side in each dimension.
 
     Attributes
@@ -586,8 +586,8 @@ def make_interp_spline(x, y, degrees=3):
 
     # broadcasting does not play nicely with xdim as last axis for some reason
     bcs = np.broadcast_to(0, (xdim, 2, 2))
-    deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=np.int)
-    nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=np.bool)
+    deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=int)
+    nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=bool)
 
     knots = []
     coefficients = np.pad(y.reshape(x.shape[:-1] + (ydim,)), np.r_[deriv_specs, np.c_[0, 0]], 'constant')
@@ -597,7 +597,7 @@ def make_interp_spline(x, y, degrees=3):
 
     for i in np.arange(xdim):
         all_other_ax_shape = np.asarray(np.r_[coefficients.shape[:i],
-            y.shape[i+1:xdim]], dtype=np.int)
+            y.shape[i+1:xdim]], dtype=int)
         x_line_sel = ((0,)*(i) + (slice(None,None),) +
             (0,)*(xdim-i-1) + (i,))
         x_slice = x[x_line_sel]

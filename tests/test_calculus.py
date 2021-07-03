@@ -23,7 +23,7 @@ def test_calculus(next_ndspline, impl):
     ndsplines.set_impl(impl)
     b = next_ndspline
     query_points = get_query_points(b)
-    nus = np.zeros((b.xdim), dtype=np.int)
+    nus = np.zeros((b.xdim), dtype=int)
     for i in range(b.xdim):
         nus[i] = 1
         if b.degrees[i] < 1:
