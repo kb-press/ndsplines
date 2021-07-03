@@ -7,6 +7,7 @@ from scipy.stats import norm
 import itertools
 from utils import get_query_points, assert_equal_splines, _make_random_spline
 
+
 #
 # Integration/Miscellaneous tests
 #
@@ -20,6 +21,11 @@ def test_evaluate_spline_different_impls():
     f_cython = ndsplines.evaluate_spline
 
     assert f_numpy is not f_cython
+
+
+def test_invalid_impl():
+    with pytest.raises(ValueError):
+        ndsplines.set_impl('notimplemented')
 
 
 #
