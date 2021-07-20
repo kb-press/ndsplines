@@ -48,5 +48,6 @@ evaluation.
     :toctree: api
 
     ~ndsplines.set_impl
+    ~ndsplines.get_impl
     ~ndsplines._bspl
     ~ndsplines._npy_bspl
