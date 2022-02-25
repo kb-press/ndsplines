@@ -15,9 +15,11 @@ from utils import get_query_points, assert_equal_splines, _make_random_spline
 def test_evaluate_spline_different_impls():
     """Check that setting the backend implementation is effective."""
     ndsplines.set_impl('numpy')
+    assert ndsplines.get_impl() == 'numpy'
     f_numpy = ndsplines.evaluate_spline
 
     ndsplines.set_impl('cython')
+    assert ndsplines.get_impl() == 'cython'
     f_cython = ndsplines.evaluate_spline
 
     assert f_numpy is not f_cython
