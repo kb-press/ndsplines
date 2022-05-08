@@ -24,6 +24,9 @@ jobs:
         env:
           # disable builds for PyPy, all 32-bit, musl
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
+          # testing
+          CIBW_TEST_REQUIRES: pytest pandas
+          CIBW_TEST_COMMAND: pytest {package}/tests
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
