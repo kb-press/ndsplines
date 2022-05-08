@@ -22,8 +22,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@2.5.0
         env:
-          # disable PyPy wheels, 32-bit
-          CIBW_SKIP: "pp* *-win32 *-manylinux_i686"
+          # disable builds for PyPy, all 32-bit, musl
+          CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux*"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v2
