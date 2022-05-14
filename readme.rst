@@ -6,6 +6,10 @@ ndsplines
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/ndsplines
 
+.. image:: https://github.com/kb-press/ndsplines/actions/workflows/build.yml/badge.svg
+    :target: https://github.com/kb-press/ndsplines/ations/workflows/build.yml
+    :alt: GitHub Actions Build
+
 .. image:: https://readthedocs.org/projects/ndsplines/badge/?version=latest
     :target: https://ndsplines.readthedocs.io/en/latest/?badge=latest
     :alt: Documentation status
@@ -18,23 +22,19 @@ ndsplines
     :target: https://zenodo.org/badge/latestdoi/172368121
     :alt: Zenodo DOI
 
-.. image:: https://dev.azure.com/kb-press/ndsplines/_apis/build/status/kb-press.ndsplines?branchName=master
-    :target: https://dev.azure.com/kb-press/ndsplines/_build/latest?definitionId=1&branchName=master
-    :alt: Azure Pipelines build status
-
-.. image:: https://codecov.io/gh/kb-press/ndsplines/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/kb-press/ndsplines
-    :alt: Codecov test coverage
-
-
-
 This is a Python package for multivariate B-splines with performant NumPy and C
-(via Cython) implementations. For a mathematical overview of tensor product 
+(via Cython) implementations. For a mathematical overview of tensor product
 B-splines, see the |Splines| page of the documentation.
 
-The primary goal of this package is to provide a unified API for tensor product 
-splines of arbitrary input and output dimension. For a list of related packages 
+The primary goal of this package is to provide a unified API for tensor product
+splines of arbitrary input and output dimension. For a list of related packages
 see the |Comparisons| page.
+
+.. |Splines| replace:: `Splines`_
+.. _Splines: https://ndsplines.readthedocs.io/en/latest/math.html
+
+.. |Comparisons| replace:: `Comparisons`_
+.. _Comparisons: https://ndsplines.readthedocs.io/en/latest/compare.html
 
 Installation
 ------------
@@ -49,22 +49,15 @@ or from source::
     $ cd ndsplines
     $ pip install .
 
-Note: If installing from source, to use the C implementation, install with the 
-``build_ext`` feature (i.e., ``$ pip install .[build_ext]``) or install Cython 
-(i.e., ``$ pip install cython``) before installing ``ndsplines``. The system 
-must have a C compiler configured before installing.
-
-.. |Splines| replace:: `Splines`_
-.. _Splines: https://ndsplines.readthedocs.io/en/latest/math.html
-
-.. |Comparisons| replace:: `Comparisons`_
-.. _Comparisons: https://ndsplines.readthedocs.io/en/latest/compare.html
+Reasonably recent versions of ``pip`` will automatically pull Cython and NumPy
+to build the compiled implementation. If you need to install ndsplines without
+compiling, try ``python setup.py install`` instead of using ``pip install``.
 
 Usage
 -----
 
-The easiest way to use ``ndsplines`` is to use one of the ``make_*`` 
-functions: ``make_interp_spline``, ``make_interp_spline_from_tidy``, or 
+The easiest way to use ``ndsplines`` is to use one of the ``make_*``
+functions: ``make_interp_spline``, ``make_interp_spline_from_tidy``, or
 ``make_lsq_spline``, which return an ``NDSpline`` object which can be used to
 evaluate the spline. For example, suppose we have data over a two-dimensional
 mesh.
@@ -105,7 +98,7 @@ evaluate it over a denser mesh.
 Generally, we construct data so that the first ``ndim`` axes index the
 independent variables and the remaining axes index output. This is
 a generalization of using rows to index time and columns to index output
-variables for time-series data. 
+variables for time-series data.
 
 We can also create an interpolating spline from a `tidy data`_ format:
 
@@ -126,14 +119,14 @@ We can also create an interpolating spline from a `tidy data`_ format:
 Note however, that the tidy dataset must be over a structured rectangular grid
 equivalent to the N-dimensional tensor product representation. Also note that
 Pandas dataframes can be used, in which case lists of column names can be used
-instead of lists of column indices. 
+instead of lists of column indices.
 
-To see examples for creating least-squares regression splines 
-with ``make_lsq_spline``, see the |1D example| and |2D example|. 
+To see examples for creating least-squares regression splines
+with ``make_lsq_spline``, see the |1D example| and |2D example|.
 
 Derivatives of constructed splines can be evaluated in two ways: (1) by using
-the ``nus`` parameter while calling the interpolator or (2) by creating a new spline 
-with the ``derivative`` method. In this codeblock, we show both ways of 
+the ``nus`` parameter while calling the interpolator or (2) by creating a new spline
+with the ``derivative`` method. In this codeblock, we show both ways of
 evaluating derivatives in each direction.
 
 .. code:: python
@@ -148,7 +141,7 @@ evaluating derivatives in each direction.
     deriv1 = deriv_interp(gridxy)
     deriv2 = interp(gridxxyy, nus=np.array([0,1]))
 
-The ``NDSpline`` class also has an ``antiderivative`` method for creating a 
+The ``NDSpline`` class also has an ``antiderivative`` method for creating a
 spline representative of the anti-derivative in the specified direction.
 
 .. code:: python
@@ -176,7 +169,6 @@ spline representative of the anti-derivative in the specified direction.
 .. |2D example| replace:: `2D example`_
 .. _2D example: https://ndsplines.readthedocs.io/en/latest/auto_examples/2d-lsq.html
 
-
 Contributing
 ------------
 
@@ -185,10 +177,10 @@ implementation of this software by `opening an issue on GitHub
 <https://github.com/kb-press/ndsplines/issues/new>`_. Constructive feedback is
 welcomed and appreciated.
 
-Bug fix pull requests are always welcome. For feature additions, breaking 
-changes, etc. check if there is an open issue discussing the change and 
-reference it in the pull request. If there isn't one, it is recommended to open 
-one with your rationale for the change before spending significant time 
+Bug fix pull requests are always welcome. For feature additions, breaking
+changes, etc. check if there is an open issue discussing the change and
+reference it in the pull request. If there isn't one, it is recommended to open
+one with your rationale for the change before spending significant time
 preparing the pull request.
 
 Ideally, new/changed functionality should come with tests and documentation. If
@@ -196,7 +188,7 @@ you are new to contributing, it is perfectly fine to open a work-in-progress
 pull request and have it iteratively reviewed.
 
 Testing
-=======
+-------
 
 To test, install the developer requirements and use ``pytest``::
 
@@ -205,7 +197,7 @@ To test, install the developer requirements and use ``pytest``::
     $ pytest
 
 Documentation
-=============
+-------------
 
 To build the docs, install the ``docs`` feature requirements (a subset of
 the developer requirements above)::
