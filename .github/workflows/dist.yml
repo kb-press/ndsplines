@@ -1,4 +1,4 @@
-name: Build wheels
+name: Build and publish dist artifacts
 
 on:
   push:
