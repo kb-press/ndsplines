@@ -6,8 +6,8 @@ ndsplines
     :alt: PyPI Package latest release
     :target: https://pypi.python.org/pypi/ndsplines
 
-.. image:: https://github.com/kb-press/ndsplines/actions/workflows/build.yml/badge.svg
-    :target: https://github.com/kb-press/ndsplines/ations/workflows/build.yml
+.. image:: https://github.com/kb-press/ndsplines/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/kb-press/ndsplines/ations/workflows/test.yml
     :alt: GitHub Actions Build
 
 .. image:: https://readthedocs.org/projects/ndsplines/badge/?version=latest
