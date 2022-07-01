@@ -70,9 +70,9 @@ setup(
     ext_modules=extensions,
     long_description=long_description,
     license='BSD',
-    setup_requires=['numpy'],
     install_requires=['numpy', 'scipy'],
     extras_require={
+        'test': ['pytest', 'pandas'],
         'examples': ['matplotlib'],
         'build_ext': ['cython'],
         'docs': ['sphinx', 'sphinx_gallery']

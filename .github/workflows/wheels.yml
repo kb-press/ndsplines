@@ -1,12 +1,21 @@
-name: Build
+name: Build wheels
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-  release:
-    types: [ published ]
+    branches:
+      - master
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      pypi_server:
+        description: 'PyPI Server'
+        required: true
+        default: 'Test PyPI'
+        type: choice
+        options:
+          - 'Test PyPI'
+          - 'PyPI'
 
 jobs:
   build_wheels:
@@ -57,7 +66,7 @@ jobs:
     name: Publish to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }} && ${{ github.event_name == 'workflow_dispatch' }}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v2
@@ -65,10 +74,16 @@ jobs:
           name: artifact
           path: dist
 
+      - name: Publish wheels to Test PyPI
+        uses: pypa/gh-action-pypi-publish@v1.5.0
+        if: ${{ github.events.inputs.pypi_server == 'Test PyPI' }}
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository_url: https://test.pypi.org/legacy/
+
       - name: Publish wheels to PyPI
         uses: pypa/gh-action-pypi-publish@v1.5.0
+        if: ${{ github.events.inputs.pypi_server == 'PyPI' }}
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-          # password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-          # repository_url: https://test.pypi.org/legacy/
