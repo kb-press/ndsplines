@@ -1,6 +1,9 @@
 name: Build and publish dist artifacts
 
 on:
+  pull_request:
+    branches:
+      - 'dependabot/**/cibuildwheel-*'
   push:
     branches:
       - master
