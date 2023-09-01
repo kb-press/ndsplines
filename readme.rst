@@ -43,15 +43,15 @@ Install ndsplines with pip::
 
     $ pip install ndsplines
 
-or from source::
+Wheels are provided for a range of Python versions and platforms, so no
+compilation is required to get the better-performing Cython-based implementation
+in many cases.
 
-    $ git clone https://github.com/kb-press/ndsplines
-    $ cd ndsplines
-    $ pip install .
+If no matching wheel is found, pip will install build dependencies and attempt
+to compile the Cython-based extension module. If this is not desired, set the
+environment variable ``NDSPLINES_NUMPY_ONLY=1``, e.g.::
 
-Reasonably recent versions of ``pip`` will automatically pull Cython and NumPy
-to build the compiled implementation. If you need to install ndsplines without
-compiling, try ``python setup.py install`` instead of using ``pip install``.
+    $ NDSPLINES_NUMPY_ONLY=1 pip install ndsplines
 
 Usage
 -----
@@ -82,7 +82,7 @@ evaluate it over a denser mesh.
 
 .. code:: python
 
-    # create the interpolating splane
+    # create the interpolating spline
     interp = ndsplines.make_interp_spline(gridxy, meshf)
 
     # generate denser grid of independent variables to interpolate

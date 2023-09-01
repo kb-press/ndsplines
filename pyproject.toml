@@ -1,8 +1,50 @@
+[project]
+name = "ndsplines"
+dynamic = ["version"]
+description = "Multi-dimensional splines"
+readme = "readme.rst"
+authors = [
+    {name = "Benjamin Margolis", email = "ben@sixpearls.com"},
+]
+maintainers = [
+    {name = "Kenneth Lyons", email = "ixjlyons@gmail.com"},
+]
+license = {file = "LICENSE"}
+classifiers=[
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+dependencies = ["numpy", "scipy"]
+
+[project.optional-dependencies]
+test = ["pytest", "pandas"]
+examples = ["matplotlib"]
+docs = ["sphinx", "sphinx_gallery"]
+
 [build-system]
+build-backend = "setuptools.build_meta"
 requires = [
-    "setuptools>=42",
-    "wheel",
-    "Cython",
+    "setuptools>=45",
+    "setuptools_scm[toml]",
+    "cython",
     "oldest-supported-numpy",
 ]
-build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+# autodiscovery doesn't exclude paper/
+packages = ["ndsplines"]
+
+[tool.setuptools_scm]
+write_to = "ndsplines/version.py"
+
+[tool.cibuildwheel]
+# disable builds for PyPy, all 32-bit, musl
+skip = "pp* *-win32 *-manylinux_i686 *-musllinux*"
+test-extras = "test"
+test-command = "pytest {package}/tests"
