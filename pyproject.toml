@@ -46,5 +46,5 @@ write_to = "ndsplines/version.py"
 [tool.cibuildwheel]
 # disable builds for PyPy, all 32-bit, musl
 skip = "pp* *-win32 *-manylinux_i686 *-musllinux*"
-test-extras = "test"
+test-extras = ["test"]
 test-command = "pytest {project}/tests"
