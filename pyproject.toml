@@ -47,4 +47,4 @@ write_to = "ndsplines/version.py"
 # disable builds for PyPy, all 32-bit, musl
 skip = "pp* *-win32 *-manylinux_i686 *-musllinux*"
 test-extras = "test"
-test-command = "pytest {package}/tests"
+test-command = "pytest {project}/tests"
