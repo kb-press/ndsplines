@@ -24,7 +24,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch_depth: 0
+          fetch-depth: 0
 
       - name: Build wheels and test
         uses: pypa/cibuildwheel@v2.8.0
