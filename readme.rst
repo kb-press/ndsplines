@@ -190,18 +190,17 @@ pull request and have it iteratively reviewed.
 Testing
 -------
 
-To test, install the developer requirements and use ``pytest``::
+To test, install the package with the ``test`` extras and use ``pytest``::
 
-    $ pip install -r requirements-dev.txt
-    $ pip install -e .
+    $ pip install .[test]
     $ pytest
 
 Documentation
 -------------
 
-To build the docs, install the ``docs`` feature requirements (a subset of
-the developer requirements above)::
+Documentation is based on Sphinx and built and served by Read the Docs. To
+build locally, install the ``docs`` requirements::
 
-    $ pip install -e .[docs]
+    $ pip install .[docs]
     $ cd docs
     $ make html
