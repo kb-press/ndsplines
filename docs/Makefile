@@ -12,9 +12,9 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean:
+	rm -rf api/*
 	rm -rf "$(BUILDDIR)"
 	rm -rf auto_*/
-
 
 .PHONY: help clean Makefile
 

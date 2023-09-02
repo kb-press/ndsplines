@@ -2,33 +2,36 @@
 API
 ===
 
+.. currentmodule:: ndsplines
+
 .. rubric:: Creation routines
 
-Routines for creating ``NDSpline`` objects.
+Routines for creating :class:`NDSpline` objects.
 
 .. autosummary::
     :toctree: api
 
-    ~ndsplines.make_lsq_spline
-    ~ndsplines.make_interp_spline
-    ~ndsplines.make_interp_spline_from_tidy
-    ~ndsplines.from_file
+    make_lsq_spline
+    make_interp_spline
+    make_interp_spline_from_tidy
+    from_file
 
 .. rubric:: Class methods
 
-Methods of the :doc:`api/ndsplines.NDSpline` class.
+Methods of the :class:`NDSpline` class.
 
 .. autosummary::
+    :toctree: api
 
-    ~ndsplines.NDSpline
-    ~ndsplines.NDSpline.__call__
-    ~ndsplines.NDSpline.derivative
-    ~ndsplines.NDSpline.antiderivative
-    ~ndsplines.NDSpline.to_file
-    ~ndsplines.NDSpline.copy
-    ~ndsplines.NDSpline.__eq__
-    ~ndsplines.NDSpline.allocate_workspace_arrays
-    ~ndsplines.NDSpline.compute_basis_coefficient_selector
+    NDSpline
+    NDSpline.__call__
+    NDSpline.derivative
+    NDSpline.antiderivative
+    NDSpline.to_file
+    NDSpline.copy
+    NDSpline.__eq__
+    NDSpline.allocate_workspace_arrays
+    NDSpline.compute_basis_coefficient_selector
 
 .. rubric:: Knots
 
@@ -37,7 +40,7 @@ Utility function for constructing knot arrays.
 .. autosummary::
     :toctree: api
 
-    ~ndsplines._not_a_knot
+    _not_a_knot
 
 .. rubric:: Implementations
 
@@ -47,7 +50,7 @@ evaluation.
 .. autosummary::
     :toctree: api
 
-    ~ndsplines.set_impl
-    ~ndsplines.get_impl
-    ~ndsplines._bspl
-    ~ndsplines._npy_bspl
+    set_impl
+    get_impl
+    _bspl
+    _npy_bspl
