@@ -25,8 +25,8 @@ dependencies = ["numpy", "scipy"]
 
 [project.optional-dependencies]
 test = ["pytest", "pandas"]
-examples = ["matplotlib"]
-docs = ["sphinx", "sphinx_gallery"]
+docs = ["sphinx", "sphinx_gallery", "matplotlib", "pandas"]
+examples = ["matplotlib", "pandas"]
 
 [build-system]
 build-backend = "setuptools.build_meta"

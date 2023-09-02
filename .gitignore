@@ -17,4 +17,6 @@ build/
 _bspl.*.pyd
 _bspl.c
 docs/auto_*
-ndsplines/version.py
+docs/api/
+version.py
+wheelhouse/
