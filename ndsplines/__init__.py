@@ -23,10 +23,7 @@ def set_impl(name):
             evaluate_spline = _bspl.evaluate_spline
             _impl = "cython"
         except ImportError:
-            raise ImportError(
-                "Can't use cython implementation. Install cython then reinstall "
-                "ndsplines."
-            )
+            raise ImportError("Cython implementation not installed.")
     elif name == "numpy":
         from . import _npy_bspl
 

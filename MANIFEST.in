@@ -1,4 +1,0 @@
-include readme.rst
-include LICENSE
-include ndsplines/*.h
-include ndsplines/*.pyx
