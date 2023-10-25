@@ -510,6 +510,8 @@ def make_lsq_spline(x, y, knots, degrees, w=None, check_finite=True):
 
 def _not_a_knot(x, k, left=True, right=True):
     """Utility function to perform the knot portion of the not-a-knot procedure.
+    For any side that does not recieve the not-a-knot, augmentation for derivative
+    specification is performed instead. Use None to leave un-modified.
 
     Parameters
     ----------
@@ -535,11 +537,15 @@ def _not_a_knot(x, k, left=True, right=True):
     t = x
     if left:
         t = np.r_[(t[0],)*(k+1), t[(k -1) //2 +1:]]
+    elif left == False:
+        t = np.r_[(t[0],)*(k), t]
     if right:
         t = np.r_[t[:-(k-1)//2 -1 or None], (t[-1],)*(k+1)]
+    elif right == False:
+        t = np.r_[t, (t[-1],)*(k)]
     return t
 
-def make_interp_spline(x, y, degrees=3):
+def make_interp_spline(x, y, degrees=3, bcs=(-1,0)):
     """Construct an interpolating B-spline.
 
     Parameters
@@ -551,6 +557,10 @@ def make_interp_spline(x, y, degrees=3):
     degrees : ndarray, shape=(xdim,), dtype=np.intc
         Degree of interpolant for each axis (or broadcastable). Optional, 
         default is 3.
+    bcs : ndarray, broadcastable to (xdim, 2, 2)
+        bc[xdim, 0 for left | 1 for right, :] = (order, value) for specifying derivative
+        conditions. Use order -1 to specify the not-a-knot boundary conditions
+        (default).
 
     Returns
     -------
@@ -571,7 +581,7 @@ def make_interp_spline(x, y, degrees=3):
         x = np.stack(np.meshgrid(*x, indexing='ij'), axis=-1)
     else:
         raise ValueError("Don't know how to interpret x")
-    
+
     if not np.all(y.shape[:xdim] == x.shape[:xdim]):
         raise ValueError("Expected y.shape to start with %s, got %s." % (repr(x.shape[:xdim]), repr(y.shape[:xdim])))
 
@@ -585,9 +595,10 @@ def make_interp_spline(x, y, degrees=3):
     degrees = np.broadcast_to(degrees, (xdim,))
 
     # broadcasting does not play nicely with xdim as last axis for some reason
-    bcs = np.broadcast_to(0, (xdim, 2, 2))
-    deriv_specs = np.asarray((bcs[:, :, 0] > 0), dtype=int)
-    nak_spec = np.asarray((bcs[:, :, 0] <= 0), dtype=bool)
+    #bcs = np.broadcast_to([2, 0], (xdim, 2, 2))
+    bcs = np.broadcast_to(bcs, (xdim, 2, 2))
+    deriv_specs = np.asarray((bcs[:, :, 0] >= 0), dtype=int)
+    nak_spec = np.asarray((bcs[:, :, 0] < 0), dtype=bool)
 
     knots = []
     coefficients = np.pad(y.reshape(x.shape[:-1] + (ydim,)), np.r_[deriv_specs, np.c_[0, 0]], 'constant')
@@ -655,6 +666,7 @@ def make_interp_spline(x, y, degrees=3):
         elif k != 0:
             t = _not_a_knot(x_slice, k, left_nak, right_nak)
 
+
         t = _as_float_array(t, check_finite)
 
 
@@ -663,8 +675,8 @@ def make_interp_spline(x, y, degrees=3):
             deriv_l_vals = np.array([])
             nleft = 0
         else:
-            deriv_l_ords = np.array([bcs[i-1, 0, 0]], dtype=np.int_)
-            deriv_l_vals = np.broadcast_to(bcs[i-1, 0, 1], ydim)
+            deriv_l_ords = np.array([bcs[i, 0, 0]], dtype=np.int_)
+            deriv_l_vals = np.broadcast_to(bcs[i, 0, 1], ydim)
             nleft = 1
 
         if right_nak:
@@ -672,8 +684,8 @@ def make_interp_spline(x, y, degrees=3):
             deriv_r_vals = np.array([])
             nright = 0
         else:
-            deriv_r_ords = np.array([bcs[i-1, 1, 0]], dtype=np.int_)
-            deriv_r_vals = np.broadcast_to(bcs[i-1, 1, 1], ydim)
+            deriv_r_ords = np.array([bcs[i, 1, 0]], dtype=np.int_)
+            deriv_r_vals = np.broadcast_to(bcs[i, 1, 1], ydim)
             nright = 1
 
         # have `n` conditions for `nt` coefficients; need nt-n derivatives
