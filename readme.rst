@@ -39,7 +39,12 @@ see the |Comparisons| page.
 Installation
 ------------
 
-Install ndsplines with pip::
+``ndsplines`` is available on PyPI as well as conda-forge.
+
+pip
+^^^
+
+Install ``ndsplines`` with pip::
 
     $ pip install ndsplines
 
@@ -52,6 +57,13 @@ to compile the Cython-based extension module. If this is not desired, set the
 environment variable ``NDSPLINES_NUMPY_ONLY=1``, e.g.::
 
     $ NDSPLINES_NUMPY_ONLY=1 pip install ndsplines
+
+conda
+^^^^^
+
+Install ``ndsplines`` with conda::
+
+    $ conda install -c conda-forge ndsplines
 
 Usage
 -----
