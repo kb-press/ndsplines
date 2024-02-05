@@ -1,9 +1,6 @@
 name: Build and publish dist artifacts
 
 on:
-  pull_request:
-    branches:
-      - 'dependabot/**/cibuildwheel-*'
   push:
     branches:
       - master
@@ -30,8 +27,9 @@ jobs:
         uses: pypa/cibuildwheel@v2.16.5
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
+          name: dist-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
 
   build_sdist:
@@ -46,8 +44,9 @@ jobs:
       - name: Build sdist
         run: pipx run build --sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
+          name: dist-sdist
           path: dist/*.tar.gz
 
   publish:
@@ -62,10 +61,11 @@ jobs:
       id-token: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: artifact
+          pattern: dist-*
           path: dist
+          merge-multiple: true
 
       - name: Publish dist to PyPI
         uses: pypa/gh-action-pypi-publish@v1.8.11
