@@ -68,4 +68,4 @@ jobs:
           merge-multiple: true
 
       - name: Publish dist to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.8.11
+        uses: pypa/gh-action-pypi-publish@v1.8.14
