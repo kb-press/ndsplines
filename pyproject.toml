@@ -21,7 +21,11 @@ classifiers=[
 ]
 requires-python = ">=3.8"
 
-dependencies = ["numpy", "scipy"]
+dependencies = [
+    "numpy<2; python_version<='3.8'",
+    "numpy; python_version>'3.8'",
+    "scipy",
+]
 
 [project.optional-dependencies]
 test = ["pytest", "pandas"]
@@ -34,8 +38,8 @@ requires = [
     "setuptools>=45",
     "setuptools_scm[toml]",
     "cython",
-    "oldest-supported-numpy; python_version<'3.12'",
-    "numpy>=1.26.0; python_version>='3.12'",
+    "oldest-supported-numpy; python_version<='3.8'",
+    "numpy>=2; python_version>'3.8'",
 ]
 
 [tool.setuptools]
