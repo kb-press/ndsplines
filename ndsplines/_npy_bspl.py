@@ -10,11 +10,11 @@ def find_interval(t, k, xvals, extrapolate=False, workspace=None):
 
     Parameters
     ----------
-    t : ndarray, shape=(n+k+1,) dtype=np.float_
+    t : ndarray, shape=(n+k+1,) dtype=float
         knots
     k : int
         degree of B-spline
-    xvals : ndarray, shape=(s,) dtype=np.float_
+    xvals : ndarray, shape=(s,) dtype=float
         values to find the interval for
     extrapolate : bool, optional
         whether to return the last or the first interval if xval
@@ -105,14 +105,14 @@ def evaluate_spline(t, k, xvals, nu, extrapolate,
     
     basis_workspace = basis_workspace.T
     if (not isinstance(basis_workspace, np.ndarray) or 
-            (basis_workspace.dtype != np.float_) or
+            (basis_workspace.dtype != float) or
             (basis_workspace.shape[0] < 2*k+2) or
             (basis_workspace.shape[1] < s)):
         raise ValueError("basis_workspace has invalid shape or dtype")
 
     u = basis_workspace[:k+1,:s]
     w = basis_workspace[k+1:2*k+2,:s]
-    bounds = np.empty((2,s), dtype=np.float_)
+    bounds = np.empty((2,s), dtype=float)
 
     u[0,...] = 1.0
     for j in range(1, k-nu+1):

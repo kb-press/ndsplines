@@ -26,9 +26,9 @@ class NDSpline(object):
 
     Parameters
     ----------
-    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
+    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=float
         List of knots in each dimension, :math:`[t_1, t_2, \ldots, t_N]`.
-    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=np.float_
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim) + yshape, dtype=float
         N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
     degrees : ndarray, shape=(xdim,), dtype=np.int_
         Array of the degree of each dimension, :math:`[k_1, k_2, \ldots, k_N]`.
@@ -39,11 +39,11 @@ class NDSpline(object):
 
     Attributes
     ----------
-    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=np.float_
+    knots : list of ndarrays, shapes=[n_0+degrees[i]+1, ..., n_ndim+degrees[-1]+1], dtype=float
         List of knots in each dimension, :math:`[t_1, t_2, \ldots, t_N]`.
     xdim : int
         Dimension of spline input space.
-    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=np.float_
+    coefficients : ndarray, shape=(n_1, n_2, ..., n_xdim, ydim), dtype=float
         N-D array of coefficients, :math:`c_{i_1, ..., i_N}`.
     ydim : int
         Dimension of spline output space.
@@ -123,7 +123,7 @@ class NDSpline(object):
                 self.xdim,
                 self.current_max_num_points,
                 2*self.max_degree+2,
-            ), dtype=np.float_)
+            ), dtype=float)
             self.interval_workspace = np.empty((self.xdim, self.current_max_num_points, ), dtype=np.intc)
             self.coefficient_selector = np.empty((self.current_max_num_points,) + self.coefficient_shape_base, dtype=np.intc)
 
@@ -135,7 +135,7 @@ class NDSpline(object):
 
         Parameters
         ----------
-        x : ndarray, shape=(s, self.xdim,) dtype=np.float_
+        x : ndarray, shape=(s, self.xdim,) dtype=float
             Points at which to evaluate the spline.
         nus : int or ndarray, shape=(self.xdim,) dtype=np.int_
             Order of derivatives for each dimension to evaluate. Optional, 
@@ -185,7 +185,7 @@ class NDSpline(object):
 
         Parameters
         ----------
-        x : ndarray, shape=(..., self.xdim) dtype=np.float_
+        x : ndarray, shape=(..., self.xdim) dtype=float
             Points at which to evaluate the spline. 
         nus : ndarray, broadcastable to shape=(self.xdim,) dtype=np.int_
             Order of derivatives for each dimension to evaluate. Optional, 
@@ -193,7 +193,7 @@ class NDSpline(object):
 
         Returns
         -------
-        y : ndarray, shape=(..., self.yshape) dtype=np.float_
+        y : ndarray, shape=(..., self.yshape) dtype=float
             Value of N-dimensional B-spline at x.
 
         """
@@ -209,7 +209,7 @@ class NDSpline(object):
 
         x_shape, x_ndim = x.shape, x.ndim
         # need to double transpose so slices of all `i`th dim coords are c-contiguous
-        x = np.ascontiguousarray(x.reshape((-1, self.xdim)).T, dtype=np.float_).T
+        x = np.ascontiguousarray(x.reshape((-1, self.xdim)).T, dtype=float).T
         num_points = x.shape[0]
 
         if isinstance(nus, np.ndarray):
@@ -515,7 +515,7 @@ def _not_a_knot(x, k, left=True, right=True):
 
     Parameters
     ----------
-    x : ndarray, shape=(n,), dtype=np.float_
+    x : ndarray, shape=(n,), dtype=float
         Knot array to perform the not-a-knot procedure on
     k : int
         Degree of desired spline
@@ -699,7 +699,7 @@ def make_interp_spline(x, y, degrees=3, bcs=(-1,0)):
 
         # set up the LHS: the collocation matrix + derivatives at boundaries
         kl = ku = k
-        ab = np.zeros((2*kl + ku + 1, nt), dtype=np.float_, order='F')
+        ab = np.zeros((2*kl + ku + 1, nt), dtype=float, order='F')
         _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
         if nleft > 0:
             _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
