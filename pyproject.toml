@@ -34,8 +34,7 @@ requires = [
     "setuptools>=45",
     "setuptools_scm[toml]",
     "cython",
-    "oldest-supported-numpy; python_version<'3.12'",
-    "numpy>=1.26.0; python_version>='3.12'",
+    "numpy>=2",
 ]
 
 [tool.setuptools]
