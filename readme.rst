@@ -22,9 +22,9 @@ ndsplines
     :target: https://zenodo.org/badge/latestdoi/172368121
     :alt: Zenodo DOI
 
-This is a Python package for multivariate B-splines with performant NumPy and C
-(via Cython) implementations. For a mathematical overview of tensor product
-B-splines, see the |Splines| page of the documentation.
+This is a Python package for multivariate B-splines with a performant Cython
+implementation. For a mathematical overview of tensor product B-splines, see the
+|Splines| page of the documentation.
 
 The primary goal of this package is to provide a unified API for tensor product
 splines of arbitrary input and output dimension. For a list of related packages
@@ -53,10 +53,7 @@ compilation is required to get the better-performing Cython-based implementation
 in many cases.
 
 If no matching wheel is found, pip will install build dependencies and attempt
-to compile the Cython-based extension module. If this is not desired, set the
-environment variable ``NDSPLINES_NUMPY_ONLY=1``, e.g.::
-
-    $ NDSPLINES_NUMPY_ONLY=1 pip install ndsplines
+to compile the Cython-based extension module.
 
 conda
 ^^^^^

@@ -14,13 +14,8 @@ from utils import get_query_points, assert_equal_splines, _make_random_spline
 def next_ndspline(request):
     return request.param
 
-@pytest.fixture(params=['cython', 'numpy'])
-def impl(request):
-    return request.param
-
-def test_calculus(next_ndspline, impl):
+def test_calculus(next_ndspline):
     """ verify calculus properties """
-    ndsplines.set_impl(impl)
     b = next_ndspline
     query_points = get_query_points(b)
     nus = np.zeros((b.xdim), dtype=int)
@@ -60,4 +55,3 @@ def test_calculus(next_ndspline, impl):
             assert_equal_splines(der_b_ij, der_b_ji)
 
         nus[i] = 0
-    ndsplines.set_impl('cython')

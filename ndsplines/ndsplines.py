@@ -3,12 +3,10 @@ import numpy as np
 import operator
 from scipy.linalg import get_lapack_funcs, LinAlgError
 
-from ndsplines import _npy_bspl
+from ndsplines import _bspl
 
-__all__ = ['impl', 'NDSpline', '_not_a_knot', 'make_interp_spline', 
+__all__ = ['NDSpline', '_not_a_knot', 'make_interp_spline', 
            'make_lsq_spline', 'make_interp_spline_from_tidy', 'from_file']
-
-impl = _npy_bspl
 
 
 class NDSpline(object):
@@ -168,7 +166,7 @@ class NDSpline(object):
                 extrapolate_flag = True
 
 
-            impl.evaluate_spline(t, k, x[:,i], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
+            _bspl.evaluate_spline(t, k, x[:,i], nu, extrapolate_flag, self.interval_workspace[i], self.basis_workspace[i],)
             np.add(
                 self.coefficient_selector_base[i][None, ...],
                 # Broadcasting does not play nciely with xdim as last axis for some reason,
@@ -699,11 +697,11 @@ def make_interp_spline(x, y, degrees=3, bcs=(-1,0)):
         # set up the LHS: the collocation matrix + derivatives at boundaries
         kl = ku = k
         ab = np.zeros((2*kl + ku + 1, nt), dtype=float, order='F')
-        impl._colloc(x_slice, t, k, ab, offset=nleft)
+        _bspl._colloc(x_slice, t, k, ab, offset=nleft)
         if nleft > 0:
-            impl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+            _bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
         if nright > 0:
-            impl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+            _bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
                                     offset=nt-nright)
 
         knots.append(t)

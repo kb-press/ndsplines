@@ -85,22 +85,10 @@ def test_2d_eval(ndspline):
 def test_nd_eval(ndspline):
     query_points = get_query_points(ndspline)
     nus = np.zeros((ndspline.xdim), dtype=int)
-    ndsplines.set_impl('cython')
-    cy_res = ndspline(query_points)
-    ndsplines.set_impl('numpy')
-    np_res = ndspline(query_points)
+    res = ndspline(query_points)
 
-    assert_allclose(cy_res, np_res)
     for i in range(ndspline.xdim):
         for der in range(ndspline.degrees[i]):
             nus[i] = der
-
-            ndsplines.set_impl('cython')
-            cy_res = ndspline(query_points, nus)
-
-            ndsplines.set_impl('numpy')
-            np_res = ndspline(query_points, nus)
-                
-            assert_allclose(cy_res, np_res)
+            res = ndspline(query_points, nus)
         nus[i] = 0
-    ndsplines.set_impl('cython')
