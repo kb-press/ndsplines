@@ -1,8 +1,7 @@
+from math import prod
 import numpy as np
 import operator
 from scipy.linalg import get_lapack_funcs, LinAlgError
-from scipy.interpolate._bsplines import (prod, _as_float_array,
-                                         _bspl as _sci_bspl)
 
 from ndsplines import _npy_bspl
 
@@ -700,11 +699,11 @@ def make_interp_spline(x, y, degrees=3, bcs=(-1,0)):
         # set up the LHS: the collocation matrix + derivatives at boundaries
         kl = ku = k
         ab = np.zeros((2*kl + ku + 1, nt), dtype=float, order='F')
-        _sci_bspl._colloc(x_slice, t, k, ab, offset=nleft)
+        impl._colloc(x_slice, t, k, ab, offset=nleft)
         if nleft > 0:
-            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
+            impl._handle_lhs_derivatives(t, k, x_slice[0], ab, kl, ku, deriv_l_ords)
         if nright > 0:
-            _sci_bspl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
+            impl._handle_lhs_derivatives(t, k, x_slice[-1], ab, kl, ku, deriv_r_ords,
                                     offset=nt-nright)
 
         knots.append(t)
@@ -838,3 +837,16 @@ def make_interp_spline_from_tidy(tidy_data, input_vars, output_vars, degrees=3):
     xdata = meshgrid_data[..., input_vars]
     ydata = meshgrid_data[..., output_vars]
     return make_interp_spline(xdata, ydata, degrees)
+
+
+def _as_float_array(x, check_finite=False):
+    """Convert the input into a C contiguous float array.
+
+    NB: Upcasts half- and single-precision floats to double precision.
+    """
+    x = np.ascontiguousarray(x)
+    dtyp = np.complex128 if np.issubdtype(x.dtype, np.complexfloating) else np.float64
+    x = x.astype(dtyp, copy=False)
+    if check_finite and not np.isfinite(x).all():
+        raise ValueError("Array must not contain infs or nans.")
+    return x
