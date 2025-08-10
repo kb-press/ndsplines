@@ -74,7 +74,6 @@ for i, size in enumerate(xx_sizes):
     spl_ndspl = ndsplines.make_interp_spline((x,y), z)
     spl_ndspl.allocate_workspace_arrays(size)
     t_scipy = 10e3 * timeit(spl_scipy, x=xx.copy(), y=yy.copy(), grid=False, n_iter=n_iter)
-    ndsplines.set_impl('cython')
     t_ndspl_pyx = 10e3 * timeit(spl_ndspl, x=xxyy,
                             n_iter=n_iter)
 

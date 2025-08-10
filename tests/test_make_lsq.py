@@ -46,9 +46,6 @@ def test_1d_make_lsq(ndspline):
         else:
             assert_allclose(nspl.coefficients.reshape(-1), ispl.c.reshape(-1))
 
-# 
-# construct a valid spline. We expect this to fail.
-#@pytest.mark.skip(reason="``interpolate.LSQBivariateSpline`` seems buggy: and does not always construct valid splines and sometimes segfaults.")
 @pytest.mark.parametrize('ndspline', [
     # I believe LSQBivariateSpline requires 1-D output
     _make_random_spline(2, yshape=(1,)),
