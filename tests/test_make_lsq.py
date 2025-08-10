@@ -48,7 +48,7 @@ def test_1d_make_lsq(ndspline):
 
 # 
 # construct a valid spline. We expect this to fail.
-@pytest.mark.skip(reason="``interpolate.LSQBivariateSpline`` seems buggy: and does not always construct valid splines and sometimes segfaults.")
+#@pytest.mark.skip(reason="``interpolate.LSQBivariateSpline`` seems buggy: and does not always construct valid splines and sometimes segfaults.")
 @pytest.mark.parametrize('ndspline', [
     # I believe LSQBivariateSpline requires 1-D output
     _make_random_spline(2, yshape=(1,)),
@@ -118,14 +118,14 @@ def test_nd_make_lsq(ndspline):
     nspl = ndsplines.make_interp_spline(knot_sample_x, knot_sample_y, k)
 
     sample_x = np.stack(np.meshgrid(*[
-        np.linspace(0,1, int(1.5*nspl.xshape[i])) for i in range(nspl.xdim)],
+        np.linspace(0,1, int(3*nspl.xshape[i])) for i in range(nspl.xdim)],
          indexing='ij'), axis=-1).reshape((-1, nspl.xdim))
 
     sample_y = nspl(sample_x)
 
     nlsq = ndsplines.make_lsq_spline(sample_x, sample_y, nspl.knots, nspl.degrees)
     assert_allclose(nlsq.coefficients, nspl.coefficients, rtol=1E-4)
-    
+
     sample_y_orig = sample_y
     signal_rms = (sample_y**2).sum(axis=0)/sample_x.size
 
@@ -140,4 +140,4 @@ def test_nd_make_lsq(ndspline):
         eval_snrs[snr_exp] = np.max(np.abs(nlsq.coefficients - nspl.coefficients)/nspl.coefficients)
         set_snrs[snr_exp] = snr_ratio
     assert (np.diff(np.log10(eval_snrs)).mean() < np.diff(np.log10(set_snrs)).mean()/2)
-    
+
