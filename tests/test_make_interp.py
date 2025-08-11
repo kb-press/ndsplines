@@ -107,3 +107,18 @@ def test_nd_make_interp(ndspline):
         tidy_df, tidy_df_x_col, tidy_df_y_col
     )
     assert_equal_splines(nspl, nspl4)
+
+
+def test_bcs():
+    x = np.linspace(-1, 1, 10)
+    y = np.sin(3 * x)
+
+    # default, natural boundary conditions so sinusoid continues outside range
+    spl_natural = ndsplines.make_interp_spline(x, y, degrees=3)
+    assert spl_natural(-1.5) > 0
+    assert spl_natural(1.5) < 0
+
+    # zero 1st deriv so ends turn back around
+    spl_const_1st_deriv = ndsplines.make_interp_spline(x, y, degrees=3, bcs=(1, 0))
+    assert spl_const_1st_deriv(-1.5) < 0
+    assert spl_const_1st_deriv(1.5) > 0
