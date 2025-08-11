@@ -704,9 +704,6 @@ def make_interp_spline(x, y, degrees=3, bcs=(-1, 0)):
         left_nak, right_nak = nak_spec[i, :]
         both_nak = left_nak and right_nak
 
-        # Here : deriv_l, r = [(nu, value), ...]
-        deriv_l_ords, deriv_r_ords = bcs[i, :, 0].astype(np.int_)
-
         x_slice = _as_float_array(x_slice, check_finite)
         # should there be a general check for k <= deriv_spec ?
 
@@ -757,20 +754,20 @@ def make_interp_spline(x, y, degrees=3, bcs=(-1, 0)):
         t = _as_float_array(t, check_finite)
 
         if left_nak:
-            deriv_l_ords = np.array([])
-            deriv_l_vals = np.array([])
+            deriv_l_ords = np.array([], dtype=int)
+            deriv_l_vals = np.array([], dtype=float)
             nleft = 0
         else:
-            deriv_l_ords = np.array([bcs[i, 0, 0]], dtype=np.int_)
+            deriv_l_ords = np.array([bcs[i, 0, 0]], dtype=int)
             deriv_l_vals = np.broadcast_to(bcs[i, 0, 1], ydim)
             nleft = 1
 
         if right_nak:
-            deriv_r_ords = np.array([])
-            deriv_r_vals = np.array([])
+            deriv_r_ords = np.array([], dtype=int)
+            deriv_r_vals = np.array([], dtype=float)
             nright = 0
         else:
-            deriv_r_ords = np.array([bcs[i, 1, 0]], dtype=np.int_)
+            deriv_r_ords = np.array([bcs[i, 1, 0]], dtype=int)
             deriv_r_vals = np.broadcast_to(bcs[i, 1, 1], ydim)
             nright = 1
 
